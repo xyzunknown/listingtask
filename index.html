@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSL 上币流程向导</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #f1f1f1; } ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+  @media print { .no-print { display: none !important; } body { background: white; } }
+  .hover-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.1) !important; }
+  .btn:hover { opacity: 0.88; } .btn:active { transform: scale(0.97); }
+  input:focus { outline: none; border-color: #2E75B6 !important; box-shadow: 0 0 0 3px rgba(46,117,182,0.15); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const { useState, useMemo, useEffect, useCallback } = React;
+const STORAGE_KEY = 'osl_listing_records_v2';
+
+// ─── Palette ──────────────────────────────────────────────────────────────────
+const C = { navy:'#1B3A6B', blue:'#2E75B6', teal:'#1A7A6E', purple:'#6A3D8F', orange:'#C55A11', green:'#059669', red:'#DC2626', gray:'#6B7280' };
+
+// ─── Static data ──────────────────────────────────────────────────────────────
+const SITES = [
+  { id:'HK',     label:'香港站 HK',     icon:'🇭🇰', color:C.navy,   bg:'#D6E4F0', note:'VAAP + SFC通报' },
+  { id:'Global', label:'国际站 Global', icon:'🌐', color:C.teal,   bg:'#D4EFEC', note:'VAAP，充提声明制' },
+  { id:'ID',     label:'印尼站 ID',     icon:'🇮🇩', color:C.purple, bg:'#EAD9F7', note:'CFX白名单，无VAAP' },
+];
+const PRODUCTS = [
+  { id:'Orderbook', label:'Orderbook 现货', icon:'📊', note:'最复杂，需MM+后台配置' },
+  { id:'RFQ',       label:'RFQ',            icon:'💱', note:'较快，主要是底仓配资' },
+  { id:'OTC',       label:'OTC',            icon:'🤝', note:'最快，无需底仓配资' },
+  { id:'Perp',      label:'Perp 合约',      icon:'📈', note:'仅Global，需风险限额' },
+  { id:'ChainOnly', label:'仅上链',          icon:'⛓️', note:'只配置钱包，无交易对，充提即完成' },
+];
+const TOKEN_TYPES = [
+  { id:'subtoken',  label:'子代币', icon:'🪙', note:'已支持链上的新代币（如ERC-20）' },
+  { id:'newchain',  label:'新链',   icon:'⛓️', note:'需新接入的区块链，耗时更长' },
+];
+const PHASE_COLORS = {
+  pre:        { border:'#F59E0B', bg:'#FEF3C7', label:'前置确认' },
+  bd:         { border:'#3B82F6', bg:'#DBEAFE', label:'业务评估' },
+  compliance: { border:'#EC4899', bg:'#FCE7F3', label:'合规/VAAP' },
+  exec:       { border:'#10B981', bg:'#D1FAE5', label:'执行配置' },
+  launch:     { border:'#7C3AED', bg:'#EDE9FE', label:'正式上线' },
+};
+const STATUS_META = {
+  'not_started': { label:'未开始', color:'#6B7280', bg:'#F3F4F6' },
+  'in_progress':  { label:'进行中', color:'#D97706', bg:'#FEF3C7' },
+  'completed':    { label:'已完成', color:'#059669', bg:'#D1FAE5' },
+  'cancelled':    { label:'已取消', color:'#9CA3AF', bg:'#F3F4F6' },
+};
+
+const CHAINS = [
+  { id:'BTC',   label:'Bitcoin',     tag:'BTC'    },
+  { id:'ERC20', label:'Ethereum',    tag:'ERC-20' },
+  { id:'TRC20', label:'Tron',        tag:'TRC-20' },
+  { id:'BEP20', label:'BNB Chain',   tag:'BEP-20' },
+  { id:'SOL',   label:'Solana',      tag:'SOL'    },
+  { id:'MATIC', label:'Polygon',     tag:'MATIC'  },
+  { id:'AVAX',  label:'Avalanche',   tag:'AVAX-C' },
+  { id:'ARB',   label:'Arbitrum',    tag:'ARB'    },
+  { id:'OP',    label:'Optimism',    tag:'OP'     },
+  { id:'BASE',  label:'Base',        tag:'Base'   },
+  { id:'TON',   label:'TON',         tag:'TON'    },
+  { id:'XRP',   label:'XRP Ledger',  tag:'XRP'    },
+  { id:'SUI',   label:'Sui',         tag:'SUI'    },
+  { id:'APT',   label:'Aptos',       tag:'APT'    },
+];
+
+// ─── Checklist builder ───────────────────────────────────────────────────────
+function buildChecklist(site, product, tokenType, opts={}) {
+  const nc = tokenType === 'newchain';
+  const stableHub  = !!opts.stableHub;
+  const launchpool = !!opts.launchpool;
+  const s = [];
+  const add = (phase, tag, task, owner, contact, time, note='', critical=false) =>
+    s.push({ phase, tag, task, owner, contact, time, note, critical });
+
+  // PRE-CONDITIONS
+  if (site==='ID') add('前置确认','pre','确认项目已在印尼政府 CFX 白名单','Listing Ops','Aisha Mi','提前确认','印尼站不需要VAAP，但币种必须在CFX白名单内才能上线',true);
+  if (nc) {
+    add('前置确认','pre','确认 Fireblocks 支持该链','钱包','Huaxi Li','提前确认','HK站必须Fireblocks支持（AML冻结/解冻功能）',true);
+    add('前置确认','pre','确认 KYT 工具支持该链','钱包/合规',site==='HK'?'Huaxi Li（Chainalysis）':site==='Global'?'Betty Nie（ScoreChain/Elliptic）':'SumSub','提前确认','查阅《KYT支持表》确认链是否在支持列表内，不支持则不能上该链',true);
+  }
+  if (product==='Orderbook'||product==='RFQ')
+    add('前置确认','pre','确认 LP / MM 流动性支持','流动性',site==='HK'?'George Qiao / Andre Ki':site==='Global'?'Leo Cheng / Josiah Choong':'Aisha Mi / George Qiao','提前确认','确认做市商能否支持该币对。如不可支持，必须@Freya Yu说明卡点',true);
+
+  // BD
+  add('业务评估','bd','商业评估（内部评审会）','BD / 研究院','Shirley Kwok / Scarlett Zhang','3–5天','按资产筛选评估框架评分，通过Listing内部评审会 + Lark上币评估流程决定');
+  add('业务评估','bd','签署 NDA','BD','Shirley Kwok','1天','必须在讨论任何实质性商业细节前完成。禁止项目方提前对外披露任何信息',true);
+  add('业务评估','bd','商务谈判：确定费用/MM/活动，签署 Listing Agreement','BD / 活动','Shirley Kwok / Freya Yu','按需','非标准合同条款必须法务专项审核。活动形式需提前获得合规确认');
+
+  // COMPLIANCE
+  if (site!=='ID') {
+    add('合规/VAAP','compliance','完成合规尽调报告（VAAP尽调）','合规','Scarlett Zhang（备份：Eddie Xin）',site==='HK'?'≤2周':'约1周','政策依据：Virtual Asset Admission Policy - Jan 2026\n模板：[HK][Template] VAAP New Admission',true);
+    add('合规/VAAP','compliance','获取法律意见书（Legal Opinion）','法务','Ella Bai','HK约2周，Global约1周','每个上线站点需要独立一份。可与尽调并行推进');
+    add('合规/VAAP','compliance','获取风险评估报告 + 平台参数','风控','Yaoxi Zhong / Tesla Ma','半天-1天','从风控获取：平台充提参数、交易参数上下限。后续配置时需要用到');
+    add('合规/VAAP','compliance','VAAP会议：提交材料 → 投票 → 存档','Listing Ops','Freya Yu','按VAAP排期','通过VAAP上会申请系统提交。会议中需做冲突声明。会后整理会议纪要+投票记录存档。\n内容清晰即可推进下一步，无需等全部审批通过',true);
+    if (site==='HK') {
+      add('合规/VAAP','compliance','（HK专属）SFC 上报通知','合规','Henry Tsang / Sophie Ma','上线前完成','必须在上线前发送，向Sophie Ma确认已经发送',true);
+      add('合规/VAAP','compliance','（HK专属）准备产品披露内容，测试前由 Scarlett Zhang 发布','合规','Scarlett Zhang','VAAP期间准备，测试前发布','过VAAP时内容已准备好，Scarlett Zhang 在测试开始前确认发布即可。\n⚠ 测试前必须先发布，不能等到正式上线后才提。\n发布页面：https://trade-hk.osl.com/pages/productDisclosure\n（页面技术更新：Rebeca Zhang 给 Jim Ball 提 K-02 单）',true);
+      add('合规/VAAP','compliance','（HK零售专属）Indices 合资格指数核查','研究院','Scarlett Zhang','月度维护','HK零售资产需确认被至少2家独立指数提供商收录，其中1家需有传统证券市场指数发布经验');
+    }
+  }
+
+  // EXECUTION — HK Orderbook
+  if (product==='Orderbook' && site==='HK') {
+    add('执行配置','exec','提前通知 TechOps 上币币种及时间','Listing Ops','Freya Yu → Jim Ball','提前1周以上','提前通知@Jim Ball确认排期。这是HK Orderbook最主要的耗时来源（2-3周），越早越好',true);
+    add('执行配置','exec','做市商沟通 + 流动性确认','流动性','George Qiao','上线前≥2周','确认做市商、锁定币对/时间/深度要求。首次接入新MM需先onboarding（约1周）');
+    add('执行配置','exec','填写币对参数，与风控核对','Listing Ops','Rebeca Zhang ↔ Work Wang','1天','参考竞品，与风控沟通确定基础参数，填写HK spot trading pairs parameters表格并在群里通知');
+    add('执行配置','exec','提交 K-01 审批','Listing Ops','Rebeca Zhang','半天','审批人：Ryan Ren / George Qiao / Eugene Cheung / Jason Liu / Jim Ball\n提出后内容清晰即可推进，不必等全部人通过',true);
+    add('执行配置','exec','TechOps 后台 MG 配置（分两阶段发布）','TechOps','Jim Ball','2–3周（主要瓶颈）','阶段①：先开放给MM+内部测试\n阶段②：再开放给公众\n包含E2E测试、流量测试',true);
+    add('执行配置','exec','准备 Token 图标 icon','R&D','Ning Lao（App端：Darcy Zhu）','≥3天（icon到位后）','App端需手动通知@Darcy Zhu更新。请尽早提供SVG+PNG格式');
+    add('执行配置','exec','上币参数配置（Coinhub / 币种信息表）','Listing Ops','Rebeca Zhang','半天','ERC-20：在Coinhub填写（需VAAP批准+风险参数+财务Netsuite账号）\n其他链：发信息表给@Huaxi Li\n风险参数：@Tom Ma / @Prakash\n财务账号：@Ringo Lo');
+    add('执行配置','exec','钱包配置','钱包','Huaxi Li','约2天','提交任务后管理产研配置，含线下部署');
+    add('执行配置','exec','Apollo 前端配置（新增表+移动端）','现货技术','Lucas Mak','2小时（审批后）','提交生成新表申请单，创建币对数据库表\napollo socket-service kline.support.symbols添加新币种\napollo user-service trade_pairs添加币对\n⚠ Apollo数据必须与MG后台配置完全一致');
+    add('执行配置','exec','（HK专属）Jim Ball 后台配置 + 测试/生产环境验证','TechOps','Jim Ball','视排期','Jim Ball 负责系统后台配置，完成测试环境验证后再推送至生产环境确认。\n⚠ 测试环境与生产环境须分别确认，不可跳过测试环境直接上生产',true);
+    add('执行配置','exec','充提测试 + 验证','出入金','Philip Ho / Tolkki Xu','2天','KYT配置 → 充值测试 → 提现测试');
+    add('执行配置','exec','更新网站交易对页面','Listing Ops','通知 Aaron Du','上线前1天','https://trade-hk.osl.com/pages/trading-pairs/professional-investors-and-corporates');
+    add('执行配置','exec','通知 Omnibus','Listing Ops','Kevin Law','上线前','通知Omnibus负责人，让broker支持新币对。所有产品都需要这一步');
+    add('正式上线','launch','开启充值 / 交易开关','Listing Ops','Rebeca Zhang（Coinhub操作）','上线当天','在Coinhub打开充值、交易开关',true);
+    add('正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','提供 Token Launch Info Sheet。渠道：公告/社媒/EDM/App Push/Banner');
+  }
+
+  // EXECUTION — HK RFQ
+  if (product==='RFQ' && site==='HK') {
+    add('执行配置','exec','发起 Lark 上币审批流','Listing Ops','Freya Yu / Rebeca Zhang','发起时','附上：资产名称、站点(HK)、产品(RFQ)、预期上线时间、预期币对。转发到上币核心排期群');
+    add('执行配置','exec','流动性审核（审批节点1）','HK Trader','Andre Ki','1天','评估LP支持、底仓是否可借。可支持→写出LP名称+额度；不可支持→写清楚卡点并@Freya Yu',true);
+    add('执行配置','exec','钱包排期（审批节点2）','钱包','Huaxi Li','1天','确认钱包配置排期');
+    add('执行配置','exec','交易对排期（审批节点3）','产品','Irene Li / Harry Tian / Ziyao Xu','1天','RFQ由Irene Li + Harry Tian + Ziyao Xu均Approve后完成');
+    add('执行配置','exec','钱包配置 + 充提验证','钱包/出入金','Huaxi Li / Philip Ho','2天','完成后Approve');
+    add('执行配置','exec','底仓配资（RFQ专属）','Trade Ops','Chris Cheng / Hetty Li','1天','根据风险信用额度对HK/Global两个站点RFQ系统账号分别进行底仓配资\n前置：trading资金需提前到位（@Henry Tam确认）');
+    add('执行配置','exec','（HK专属）Jim Ball 后台配置 + 测试/生产环境验证','TechOps','Jim Ball','视排期','Jim Ball 负责系统后台配置，完成测试环境验证后再推送至生产环境确认。\n⚠ 测试环境与生产环境须分别确认，不可跳过测试环境直接上生产',true);
+    add('执行配置','exec','RFQ 交易对配置 + 测试','产品','Irene Li','1天','验证完成后确保交易对状态为"closed"，不对用户展示，等正式上线再开关');
+    add('执行配置','exec','（HK专属）交易对页面配置','产品','Irene Li','半天','提交 [HK] Trading Pair Page Update - PI 需求');
+    add('执行配置','exec','通知 Omnibus','Listing Ops','Kevin Law','上线前','通知Omnibus负责人，让broker支持新币对');
+    add('正式上线','launch','开启充提全量开关 + RFQ 开关','Listing Ops / 产品','Rebeca Zhang（充提） / Irene Li（RFQ手动打开）','上线当天','两个开关都要打开才算完成',true);
+    add('正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','提供 Token Launch Info Sheet');
+  }
+
+  // EXECUTION — HK OTC
+  if (product==='OTC' && site==='HK') {
+    add('执行配置','exec','发起 Lark 上币审批流','Listing Ops','Freya Yu / Rebeca Zhang','发起时','附上：资产名称、站点(HK)、产品(OTC)、预期上线时间、预期币对');
+    add('执行配置','exec','流动性审核（审批节点1）','HK Trader','Andre Ki','1天','OTC流动性评估（OTC无需Trade Ops底仓配资）');
+    add('执行配置','exec','钱包排期（审批节点2）','钱包','Huaxi Li','1天','确认钱包配置排期。注：OTC需同步配置SG站');
+    add('执行配置','exec','交易对排期（审批节点3）','产品','Irene Li','1天','OTC由Irene Li排期并Approve');
+    add('执行配置','exec','钱包配置 + 充提验证','钱包/出入金','Huaxi Li / Philip Ho','2天','完成后Approve');
+    add('执行配置','exec','（HK专属）Jim Ball 后台配置 + 测试/生产环境验证','TechOps','Jim Ball','视排期','Jim Ball 负责系统后台配置，完成测试环境验证后再推送至生产环境确认。\n⚠ 测试环境与生产环境须分别确认，不可跳过测试环境直接上生产',true);
+    add('执行配置','exec','OTC 交易对配置 + 测试','产品','Irene Li','1天','配置完成后验证');
+    add('执行配置','exec','通知 Omnibus','Listing Ops','Kevin Law','上线前','通知Omnibus负责人，让broker支持新币对');
+    add('正式上线','launch','开启充提全量开关','Listing Ops','Rebeca Zhang','上线当天','',true);
+    add('正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','提供 Token Launch Info Sheet');
+  }
+
+  // EXECUTION — Global RFQ/OTC
+  if (site==='Global' && (product==='RFQ'||product==='OTC')) {
+    add('执行配置','exec','发起 Lark 上币审批流 + 提供配置表','Listing Ops','Freya Yu / Rebeca Zhang','发起时','附上 Global站上币上链配置表。同步转发到上币核心排期群');
+    add('执行配置','exec','流动性审核（SG / Global）','SG/Global Trader',product==='RFQ'?'SG: Qiyuan Ng\nGlobal: Josiah Choong / Rongyao Lim':'Josiah Choong / Rongyao Lim','1天','SG站评估钱包类型：默认3PC，大额底仓考虑HSM（trader评估）',true);
+    add('执行配置','exec','准备上币参数（填写配置表）','Listing Ops','Rebeca Zhang','半天','填写 Global站上币上链配置表（币种参数共享文档）');
+    add('执行配置','exec','币种信息参数配置（国际站财务后台）','Listing Ops','Rebeca Zhang','半天','URL: https://web-admin-finance-prod.glb.osl-nucleus.com/\n包含：KYT配置（Betty Nie）+ 风控配置（Michael Xu）');
+    add('执行配置','exec','钱包 + 安全配置','钱包/安全','Huaxi Li / Richard Yang','1–2天','Fireblocks安全权限配置：@Richard Yang');
+    add('执行配置','exec','币种启用（灰度状态）','Listing Ops','Rebeca Zhang','半天','钱包完成后，在币种配置中"启用"币种，发布apollo。默认灰度状态，仅白名单可见');
+    add('执行配置','exec','配置灰度白名单','Listing Ops','Rebeca Zhang / Freya Yu','半天','在灰度中添加：钱包验证组 + 交易验证组的白名单');
+    add('执行配置','exec','交易对排期（产品Approve）','产品','Irene Li','1天','RFQ和OTC均由Irene Li排期并Approve');
+    if (product==='RFQ')
+      add('执行配置','exec','底仓配资（RFQ专属）','Trade Ops / Global Trader','Chris Cheng / Hetty Li\nJosiah Choong','1天','各站分别申请风险信用额度，Trade Ops执行底仓账户配置。前置：Henry Tam确认trading资金到位');
+    if (product==='RFQ' && stableHub) {
+      add('执行配置','exec','【StableHub】确认币对限额规则','Listing Ops / 产品','Eyang / Irene Li','配置前确认','确认每个交易对的 1:1 兑换额度上限（例：每位用户每日 $50K）及超限处理方式（按市价成交 or 无法交易）。\n示例：USD/USDC 每人每日 50K 1:1；USDT 交易对每人每月 20K 1:1；超出限额无法交易',true);
+      add('执行配置','exec','【StableHub】底仓资金入账','Listing Ops / Trade Ops','Eyang（申请）→ Harry Tian（转账）','配置前完成','Eyang 申请底仓资金金额及目标地址，Harry Tian 将资金转入 StableHub 对应账户。入账后截图存档',true);
+      add('执行配置','exec','【StableHub】通知产研上线','Listing Ops','Eyang → 【Stablehub/RFQ 相关问题沟通】群','上线当天','在【Stablehub/RFQ 相关问题沟通】微信群中通知产研。\n\n话术参考：\nhi StableHub 本周新增上线 XXX 交易对：XXX/USD，XXX/USDC，XXX/USDT。已经确认无市价，USD 和 USDC 交易对初步设置每人每日 50k 1:1 限额，USDT 交易对设置每人每月 20k 1:1 限额；超出限额无法交易。底仓已经转入了，打了 50k。后续根据限额规则产品的更新再统一调整限额。',true);
+      add('执行配置','exec','【StableHub】确认奖金打入发奖账户','Listing Ops','Tolkki Xu','上线前确认','确认奖励资金已转入发奖账户，由 Tolkki Xu 核实',true);
+    }
+    add('执行配置','exec','充提验证 + RFQ/OTC配置测试','Listing Ops监督 / 产品','Huaxi Li / Irene Li','1天','充值验证→底仓充值→配置&验证。RFQ验证完确保交易对为"closed"状态');
+    add('执行配置','exec','行情页 / 币种资料配置（如适用）','产品','Irene Li','半天','RFQ行情页：https://www.osl.com/en/markets');
+    add('执行配置','exec','确定上线时间，通知相关人员','Listing Ops','Freya Yu → Aaron Du / Irene Li','上线前1天','');
+    add('正式上线','launch','充提全量开关 + RFQ/OTC开关','Listing Ops / 产品','Rebeca Zhang（充提） / Irene Li（RFQ/OTC手动打开）','上线当天','',true);
+    add('正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','提供 Token Launch Info Sheet');
+  }
+
+  // EXECUTION — Global Orderbook
+  if (site==='Global' && product==='Orderbook') {
+    add('执行配置','exec','前置确认 LP / MM 支持','流动性/产品','Leo Cheng / Irene Li','提前确认','确认MM/LP支持及可支持的交易额度');
+    add('执行配置','exec','填写交易对参数，与风控核对','Listing Ops','Rebeca Zhang ↔ Work Wang','1天','填写 Global现货上线币对及基础参数 表格');
+    add('执行配置','exec','通知 MM 准备','流动性','Freya Yu → Leo Cheng','上线前≥1周','');
+    add('执行配置','exec','币种信息配置 + 钱包配置','Listing Ops / 钱包','Rebeca Zhang / Huaxi Li','1–2天','参照Global RFQ/OTC的参数配置流程');
+    add('执行配置','exec','Spot 交易对准备（Apollo配置）','产品/研发','Aaron Du → Max Liu / Yellow Jiang','按排期','通知@Aaron Du，他同步到研发进行Apollo配置');
+    add('执行配置','exec','充提验证','Listing Ops','Huaxi Li','1天','');
+    add('正式上线','launch','充提全量开关打开 + 宣发','Listing Ops / Marketing','Rebeca Zhang / Freya Yu','上线当天','',true);
+  }
+
+  // EXECUTION — Global Perp
+  if (site==='Global' && product==='Perp') {
+    add('执行配置','exec','VAAP确认：指数价格可取 + 杠杆倍数','合规/风控','Scarlett Zhang / Tesla Ma','过VAAP时确认','合约特有：在VAAP阶段需同时确认指数价格可取，并确认币对杠杆倍数',true);
+    add('执行配置','exec','最大下单量 + 风险限额确认','风控','Tesla Ma / Work Wang','1天','确认最大下单量和下单金额。每个币对对应一个独立的风险限额表');
+    add('执行配置','exec','合约后台配置（币对）','Listing Ops','Freya Yu / Rebeca Zhang','1天','在合约后台配置币对');
+    add('执行配置','exec','价格限制配置','Listing Ops','Freya Yu / Rebeca Zhang','半天','配置合约价格上下限，限制用户下单价格范围和撮合成交范围');
+    add('执行配置','exec','指数配置 + 资金费率','Listing Ops','Freya Yu / Rebeca Zhang','半天','每个币对增加交易所指数配置，并配置资金费率');
+    add('执行配置','exec','特殊费率配置（如需）','Listing Ops / 流动性','Freya Yu / Leo Cheng → Eric Zhang','按需','按流动性团队通知需求配置做市商特殊费率，研发检查做市商账号与费率');
+    add('执行配置','exec','币对发布（隐藏）+ 做市商接入验证','流动性','Leo Cheng','约2小时验证','后台发布但不展示，MM可通过API摆单并验证\n注：Puhui新币对需专项资金申请，约2天');
+    add('正式上线','launch','正式上线 + 开放展示 + 风控监控配置','Listing Ops / 风控','Freya Yu / Rebeca Zhang / Work Wang','上线当天','通知风控@Work Wang配置监控',true);
+    add('正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','');
+  }
+
+  // EXECUTION — ID
+  if (site==='ID') {
+    add('执行配置','exec','准备上币参数 + 通知钱包 + 通知流动性','Listing Ops','Rebeca Zhang → Huaxi Li / George Qiao','半天','填写上币配置表（参考：上币字段说明）。同步通知钱包和流动性团队');
+    add('执行配置','exec','后台币种信息参数配置（印尼站财务后台）','Listing Ops','Rebeca Zhang','半天','URL: https://upex-base-rest-finance.id.sre-public.com/');
+    add('执行配置','exec','钱包币种/链参数配置','钱包','Huaxi Li','1–2天','完成所有链和币种配置');
+    add('执行配置','exec','研发 Apollo 配置','研发','Aaron Du → Max Liu / Yellow Jiang','1天','通知@Aaron Du，他同步币对参数给研发进行Apollo配置');
+    add('执行配置','exec','运营后台币对参数配置','Listing Ops','Aaron Du / Aisha Mi','半天','URL: https://upex-base-rest.id.sre-public.com/zh_CN/configSystem/tradeConfig');
+    add('执行配置','exec','配置 MM 账户（灰度状态）','Listing Ops','Freya Yu / Aaron Du','半天','选择"是"灰度→搜索币对→"转线上"→"同步Apollo"→填入做市账户和对敲账户\n如报错联系：产品@Aaron Du + 研发@Max Liu');
+    add('正式上线','launch','开盘（点击开盘按钮）','Listing Ops','Freya Yu','上线当天','⚠ 开盘前先在用户侧界面检查：币对展示和排序是否符合预期',true);
+    add('正式上线','launch','Marketing 宣发','Marketing','Aisha Mi 协调','上线同步','印尼站内容需遵守OJK法规，不得有收益保证或误导性声明');
+    if (launchpool) {
+      add('执行配置','exec','【Launchpool】Gas Fee 补充到链上','Listing Ops','Aisha Mi','配置前（新链必做）', nc?'新链上线必须提前将 Gas Fee 充值到链上地址，确保合约交互正常。请确认链地址和金额后操作':'非新链可忽略此步骤，如涉及合约交互请确认 Gas Fee 余额充足', nc);
+      add('执行配置','exec','【Launchpool】奖励转入发奖账户','Listing Ops','Aisha Mi','上线前完成','将 Launchpool 活动奖励资金转入印尼站发奖账户，Aisha Mi 确认到账后存档截图',true);
+      add('执行配置','exec','【Launchpool】计算 APR','Listing Ops / 产品','Aisha Mi','上线前','根据奖励总量、活动周期、预计参与量计算年化收益率（APR），提供给公告和产品配置使用',true);
+      add('执行配置','exec','【Launchpool】撰写上线公告','Marketing / Listing Ops','Aisha Mi 协调','上线前','公告内容需包含：活动规则、奖励币种、APR、参与条件、时间段。须符合OJK法规，不得有收益保证',true);
+      add('执行配置','exec','【Launchpool】后台参数配置','产品 / 技术','Aisha Mi → 技术团队','上线当天','在 Launchpool 后台配置活动参数：奖励币种、总量、APR、开始/结束时间、参与条件、上限等',true);
+    }
+  }
+
+  // EXECUTION — 仅上链（所有站点）
+  if (product==='ChainOnly') {
+    add('执行配置','exec','钱包币种/链参数配置','钱包','Huaxi Li','1–2天','配置该链/币种的钱包参数，完成后即可开启充提',true);
+    add('正式上线','launch','开启充提全量开关','Listing Ops','Rebeca Zhang','配置完成后','充提开关打开后即完成，无需交易对配置',true);
+  }
+
+  return s;
+}
+
+function estimateTime(site, product, tokenType) {
+  const nc = tokenType==='newchain';
+  if (site==='HK' && product==='Orderbook') return nc?'约4–6周':'约3–4周';
+  if (site==='HK' && product==='RFQ')       return nc?'约3–4周':'约1–2周';
+  if (site==='HK' && product==='OTC')       return nc?'约3–4周':'约1–2周';
+  if (site==='Global' && product==='RFQ')   return nc?'约2–3周':'约3–5天';
+  if (site==='Global' && product==='OTC')   return nc?'约2–3周':'约2–3天';
+  if (site==='Global' && product==='Orderbook') return nc?'约3–4周':'约1–2周';
+  if (site==='Global' && product==='Perp') return nc?'约3–4周':'约1–2周';
+  if (site==='ID') return nc?'约2–3周':'约1周';
+  if (product==='ChainOnly') return nc?'约1–2周':'约2–3天';
+  return '—';
+}
+
+// ─── Storage helpers ──────────────────────────────────────────────────────────
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); } catch { return []; }
+}
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function computeStatus(checked, total) {
+  const done = Object.values(checked).filter(Boolean).length;
+  if (done===0) return 'not_started';
+  if (done===total) return 'completed';
+  return 'in_progress';
+}
+function getRecordStatus(r, total) {
+  if (r.cancelled) return 'cancelled';
+  return computeStatus(r.checked||{}, total);
+}
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function fmtLaunchTime(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;
+}
+// datetime-local input needs "YYYY-MM-DDTHH:MM"
+function toInputVal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+}
+
+// ─── Components ───────────────────────────────────────────────────────────────
+
+function ProgressRing({ pct, size=48, stroke=4, color='#2E75B6' }) {
+  const r = (size-stroke)/2, circ = 2*Math.PI*r;
+  return (
+    <svg width={size} height={size} style={{transform:'rotate(-90deg)'}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#E5E7EB" strokeWidth={stroke}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={pct===100?'#059669':color} strokeWidth={stroke}
+        strokeDasharray={circ} strokeDashoffset={circ*(1-pct/100)} strokeLinecap="round" style={{transition:'stroke-dashoffset 0.4s'}}/>
+      <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="middle"
+        style={{fill:pct===100?'#059669':'#374151', fontSize:12, fontWeight:700, transform:'rotate(90deg)', transformOrigin:`${size/2}px ${size/2}px`}}>
+        {pct}%
+      </text>
+    </svg>
+  );
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onViewCompleted }) {
+  const [filter, setFilter] = useState('all');
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [editingLaunchId, setEditingLaunchId] = useState(null);
+  const [launchInputVal, setLaunchInputVal] = useState('');
+
+  const openCancelModal = (e, id) => {
+    e.stopPropagation();
+    setCancelTarget(id);
+    setCancelReason('');
+  };
+  const confirmCancel = () => {
+    if (!cancelReason.trim()) return;
+    onDelete(cancelTarget, cancelReason.trim());
+    setCancelTarget(null);
+    setCancelReason('');
+  };
+
+  const filtered = records.filter(r => {
+    if (filter==='all') return true;
+    const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
+    const status = getRecordStatus(r, checklist.length);
+    return status === filter;
+  });
+
+  const STATUS_ORDER = { in_progress:0, not_started:1, completed:2, cancelled:3 };
+  const sorted = [...filtered].sort((a,b) => {
+    const clA = buildChecklist(a.site,a.product,a.tokenType,{stableHub:a.stableHub});
+    const clB = buildChecklist(b.site,b.product,b.tokenType,{stableHub:b.stableHub});
+    const sA = STATUS_ORDER[getRecordStatus(a, clA.length)] ?? 99;
+    const sB = STATUS_ORDER[getRecordStatus(b, clB.length)] ?? 99;
+    if (sA !== sB) return sA - sB;
+    // 进行中：有预期上线时间的排前面，按时间升序（最近截止的优先）
+    if (sA === 0) {
+      if (a.expectedLaunchTime && b.expectedLaunchTime)
+        return new Date(a.expectedLaunchTime) - new Date(b.expectedLaunchTime);
+      if (a.expectedLaunchTime) return -1;
+      if (b.expectedLaunchTime) return 1;
+    }
+    return new Date(b.updatedAt) - new Date(a.updatedAt);
+  });
+
+  return (
+    <div>
+      {/* Cancel modal */}
+      {cancelTarget && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
+          <div style={{background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:440, boxShadow:'0 8px 40px rgba(0,0,0,0.18)'}}>
+            <div style={{fontWeight:800, fontSize:17, color:'#111827', marginBottom:6}}>取消上币任务</div>
+            <div style={{fontSize:13, color:'#6B7280', marginBottom:18}}>进度数据会完整保留，可随时恢复。请填写取消原因：</div>
+            <textarea
+              autoFocus
+              value={cancelReason}
+              onChange={e=>setCancelReason(e.target.value)}
+              placeholder="例如：项目方撤回申请、合规未通过、暂缓上线..."
+              rows={4}
+              style={{width:'100%', border:'2px solid #E5E7EB', borderRadius:10, padding:'10px 12px', fontSize:14, fontFamily:'inherit', resize:'vertical', outline:'none'}}
+              onFocus={e=>e.target.style.borderColor='#2E75B6'}
+              onBlur={e=>e.target.style.borderColor='#E5E7EB'}
+            />
+            <div style={{display:'flex', gap:10, marginTop:16, justifyContent:'flex-end'}}>
+              <button onClick={()=>setCancelTarget(null)} style={{border:'1px solid #E5E7EB', background:'white', borderRadius:9, padding:'9px 18px', fontSize:13, cursor:'pointer', color:'#6B7280', fontWeight:600}}>返回</button>
+              <button onClick={confirmCancel} disabled={!cancelReason.trim()} style={{border:'none', background: cancelReason.trim() ? '#DC2626' : '#F3F4F6', color: cancelReason.trim() ? 'white' : '#9CA3AF', borderRadius:9, padding:'9px 20px', fontSize:13, cursor: cancelReason.trim() ? 'pointer' : 'not-allowed', fontWeight:700}}>确认取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Header */}
+      <div style={{background:C.navy, padding:'20px 24px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+        <div>
+          <div style={{color:'white', fontSize:20, fontWeight:700}}>OSL 上币流程向导</div>
+          <div style={{color:'rgba(255,255,255,0.65)', fontSize:13, marginTop:2}}>管理所有进行中的上币任务</div>
+        </div>
+        <div style={{display:'flex', gap:8}}>
+          <button className="btn" onClick={onViewCompleted} style={{background:'rgba(255,255,255,0.15)', color:'white', border:'1px solid rgba(255,255,255,0.3)', borderRadius:10, padding:'10px 16px', fontWeight:600, cursor:'pointer', fontSize:13}}>
+            📊 已完成记录
+          </button>
+          <button className="btn" onClick={onNew} style={{background:'#2E75B6', color:'white', border:'none', borderRadius:10, padding:'10px 20px', fontWeight:700, cursor:'pointer', fontSize:14}}>
+            + 新建上币任务
+          </button>
+        </div>
+      </div>
+
+      <div style={{maxWidth:900, margin:'0 auto', padding:'20px 16px'}}>
+        {/* Stats bar */}
+        {records.length > 0 && (
+          <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20}}>
+            {[
+              { key:'not_started', label:'未开始', color:'#6B7280' },
+              { key:'in_progress',  label:'进行中', color:'#D97706' },
+              { key:'completed',    label:'已完成', color:'#059669' },
+              { key:'cancelled',    label:'已取消', color:'#9CA3AF' },
+            ].map(({key,label,color}) => {
+              const cnt = records.filter(r => getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}).length) === key).length;
+              return (
+                <div key={key} onClick={()=>setFilter(filter===key?'all':key)} style={{
+                  background: filter===key ? '#EBF4FB' : 'white',
+                  border: `1px solid ${filter===key ? '#2E75B6' : '#E5E7EB'}`,
+                  borderRadius:12, padding:'14px 16px', cursor:'pointer', textAlign:'center',
+                  boxShadow:'0 1px 4px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{fontSize:26, fontWeight:800, color}}>{cnt}</div>
+                  <div style={{fontSize:12, color:'#6B7280', marginTop:2}}>{label}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Record list */}
+        {sorted.length === 0 ? (
+          <div style={{textAlign:'center', padding:'60px 0', color:'#9CA3AF'}}>
+            <div style={{fontSize:48, marginBottom:16}}>📋</div>
+            <div style={{fontSize:16, fontWeight:600, marginBottom:8}}>还没有上币任务</div>
+            <div style={{fontSize:13}}>点击右上角「新建上币任务」开始</div>
+          </div>
+        ) : (
+          <div style={{display:'flex', flexDirection:'column', gap:7}}>
+            {sorted.map(r => {
+              const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
+              const done = Object.values(r.checked||{}).filter(Boolean).length;
+              const pct = checklist.length ? Math.round(done/checklist.length*100) : 0;
+              const status = getRecordStatus(r, checklist.length);
+              const sm = STATUS_META[status];
+              const isCancelled = status === 'cancelled';
+              const siteInfo = SITES.find(s=>s.id===r.site);
+              const prodInfo = PRODUCTS.find(p=>p.id===r.product);
+              const siteColor = siteInfo?.color || '#6B7280';
+              const pendingCritical = isCancelled ? [] : checklist
+                .map((step,i)=>({...step,idx:i}))
+                .filter(step=>step.critical && !(r.checked||{})[step.idx]);
+              return (
+                <div key={r.id} className="hover-card" style={{
+                  background: isCancelled ? '#FAFAFA' : 'white',
+                  borderRadius:10,
+                  boxShadow:'0 1px 4px rgba(0,0,0,0.06)',
+                  border: pendingCritical.length>0 && !isCancelled ? '1px solid #FECACA' : '1px solid #E5E7EB',
+                  borderLeft: `4px solid ${isCancelled ? '#D1D5DB' : siteColor}`,
+                  cursor:'pointer', transition:'all 0.15s', overflow:'hidden',
+                  opacity: isCancelled ? 0.55 : 1,
+                }} onClick={()=>onOpen(r.id)}>
+                  {/* Main row */}
+                  <div style={{display:'flex', alignItems:'center', gap:14, padding:'12px 16px'}}>
+                    <ProgressRing pct={pct} />
+                    <div style={{flex:1, minWidth:0}}>
+                      {/* Row 1: name + badges */}
+                      <div style={{display:'flex', alignItems:'center', gap:7, flexWrap:'wrap'}}>
+                        <span style={{fontWeight:800, fontSize:16, color:'#111827'}}>{r.tokenName}</span>
+                        <span style={{background: isCancelled?'#F3F4F6':siteInfo?.bg, color:siteColor, fontSize:11, fontWeight:800, padding:'2px 9px', borderRadius:99, border:`1px solid ${siteColor}40`}}>{siteInfo?.icon} {r.site}</span>
+                        <span style={{background:'#F3F4F6', color:'#374151', fontSize:11, fontWeight:600, padding:'2px 9px', borderRadius:99}}>{prodInfo?.icon} {r.product}{r.stableHub?' +SH':''}{r.launchpool?' +LP':''}</span>
+                        <span style={{background:sm.bg, color:sm.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99}}>{sm.label}</span>
+                        {pendingCritical.length>0 && <span style={{background:'#FEE2E2', color:'#DC2626', fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99}}>⚠ {pendingCritical.length} 关键项</span>}
+                      </div>
+                      {/* Row 2: meta + launch time — 全部一行 */}
+                      <div style={{display:'flex', gap:8, marginTop:5, alignItems:'center', flexWrap:'wrap'}}>
+                        <span style={{fontSize:12, color:'#4B5563'}}>{r.tokenType==='newchain'?'⛓️ 新链':'🪙 子代币'}</span>
+                        {r.chainOnly && <span style={{fontSize:11, background:'#EDE9FE', color:'#7C3AED', border:'1px solid #DDD6FE', borderRadius:5, padding:'1px 7px', fontWeight:600}}>仅上链</span>}
+                        {(r.chainLabels||[]).map((tag,i)=>(
+                          <span key={i} style={{fontSize:11, background:'#F3F4F6', color:'#374151', border:'1px solid #E5E7EB', borderRadius:5, padding:'1px 7px', fontWeight:500}}>{tag}</span>
+                        ))}
+                        <span style={{fontSize:12, color:'#9CA3AF'}}>更新 {fmtDate(r.updatedAt)}</span>
+                        {status==='in_progress' && (
+                          <span style={{display:'flex', alignItems:'center', gap:5}} onClick={e=>e.stopPropagation()}>
+                            <span style={{fontSize:12, color:'#374151', fontWeight:600}}>🗓 预期上线：</span>
+                            {editingLaunchId===r.id ? (
+                              <span style={{display:'flex', alignItems:'center', gap:5}}>
+                                <input type="datetime-local" value={launchInputVal} onChange={e=>setLaunchInputVal(e.target.value)} step="3600"
+                                  style={{fontSize:12, border:'1.5px solid #2E75B6', borderRadius:6, padding:'2px 8px', fontFamily:'inherit', outline:'none'}}/>
+                                <button onClick={()=>{
+                                  const iso = launchInputVal ? new Date(launchInputVal).toISOString() : null;
+                                  onUpdate({...r, expectedLaunchTime:iso, updatedAt:new Date().toISOString()});
+                                  setEditingLaunchId(null);
+                                }} style={{background:C.blue, color:'white', border:'none', borderRadius:6, padding:'3px 10px', fontSize:12, cursor:'pointer', fontWeight:700}}>保存</button>
+                                <button onClick={()=>setEditingLaunchId(null)} style={{background:'none', border:'1px solid #E5E7EB', borderRadius:6, padding:'3px 8px', fontSize:12, cursor:'pointer', color:'#6B7280'}}>取消</button>
+                              </span>
+                            ) : (
+                              <span onClick={()=>{setEditingLaunchId(r.id); setLaunchInputVal(toInputVal(r.expectedLaunchTime));}}
+                                style={{fontSize:12, color: r.expectedLaunchTime?'#D97706':'#9CA3AF', fontWeight: r.expectedLaunchTime?700:400,
+                                  cursor:'pointer', borderBottom:'1px dashed currentColor', paddingBottom:1}}>
+                                {fmtLaunchTime(r.expectedLaunchTime) || '点击设置'}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {/* Row 3: progress bar + step count */}
+                      <div style={{display:'flex', alignItems:'center', gap:8, marginTop:6}}>
+                        <div style={{flex:1, background:'#E5E7EB', borderRadius:99, height:5, overflow:'hidden', maxWidth:260}}>
+                          <div style={{width:`${pct}%`, height:'100%', background: pct===100?'#059669': isCancelled?'#D1D5DB':siteColor, borderRadius:99, transition:'width 0.3s'}}/>
+                        </div>
+                        <span style={{fontSize:11, color:'#9CA3AF', whiteSpace:'nowrap'}}>{done}/{checklist.length} 步骤</span>
+                      </div>
+                    </div>
+                    {isCancelled
+                      ? <button className="btn" onClick={e=>{e.stopPropagation(); onRestore(r.id);}} style={{background:'none', border:'1px solid #D1FAE5', color:'#059669', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap'}}>↩ 恢复</button>
+                      : <button className="btn" onClick={e=>openCancelModal(e, r.id)} style={{background:'none', border:'1px solid #E5E7EB', color:'#9CA3AF', borderRadius:8, width:30, height:30, cursor:'pointer', fontSize:14, flexShrink:0}} title="取消">✕</button>
+                    }
+                  </div>
+                  {/* Cancelled reason strip */}
+                  {isCancelled && r.cancelReason && (
+                    <div style={{borderTop:'1px solid #F3F4F6', background:'#FAFAFA', padding:'6px 16px 6px 20px', display:'flex', gap:8, alignItems:'center'}}>
+                      <span style={{fontSize:11, fontWeight:700, color:'#9CA3AF', flexShrink:0}}>取消原因</span>
+                      <span style={{fontSize:12, color:'#6B7280'}}>{r.cancelReason}</span>
+                    </div>
+                  )}
+                  {/* Pending critical items strip */}
+                  {pendingCritical.length>0 && (
+                    <div style={{borderTop:'1px solid #FEE2E2', background:'#FFF7F7', padding:'7px 16px 7px 20px', display:'flex', flexDirection:'column', gap:4}}>
+                      <div style={{fontSize:11, fontWeight:700, color:'#B91C1C', letterSpacing:0.3}}>PENDING 关键项</div>
+                      {pendingCritical.slice(0,3).map((step,i)=>(
+                        <div key={i} style={{display:'flex', alignItems:'baseline', gap:7}}>
+                          <span style={{width:14, height:14, borderRadius:3, border:'1.5px solid #FCA5A5', display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                            <span style={{fontSize:8, color:'#EF4444'}}>✕</span>
+                          </span>
+                          <span style={{fontSize:12, color:'#374151', fontWeight:600}}>{step.task}</span>
+                          <span style={{fontSize:11, color:'#9CA3AF', flexShrink:0}}>— {step.contact.split('\n')[0]}</span>
+                        </div>
+                      ))}
+                      {pendingCritical.length>3 && <div style={{fontSize:11, color:'#EF4444'}}>还有 {pendingCritical.length-3} 项关键步骤待处理...</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── New Listing Wizard ───────────────────────────────────────────────────────
+function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting }) {
+  const [site, setSite] = useState(null);
+  const [product, setProduct] = useState(null);
+  const [tokenType, setTokenType] = useState(null);
+  const [tokenSymbol, setTokenSymbol] = useState('');
+  const [quoteCurrencies, setQuoteCurrencies] = useState([]); // selected quote currencies
+  const [chainOnly, setChainOnly] = useState(false);          // 仅上链
+  const [chains, setChains] = useState([]);
+  const [customChain, setCustomChain] = useState('');
+  const [userType, setUserType] = useState('');
+  const [stableHub, setStableHub] = useState(null);
+  const [launchpool, setLaunchpool] = useState(null); // null=未选, true/false — ID站专属
+  const [dupWarning, setDupWarning] = useState(null);
+
+  const QUOTE_OPTIONS = ['USD','USDT','USDC','BTC','HKD','IDR'];
+  const [customQuote, setCustomQuote] = useState('');
+  const addCustomQuote = () => {
+    const v = customQuote.trim().toUpperCase();
+    if (!v || quoteCurrencies.includes(v)) { setCustomQuote(''); return; }
+    setQuoteCurrencies(prev=>[...prev, v]);
+    setCustomQuote('');
+  };
+  const toggleQuote = (q) => {
+    if (chainOnly) return;
+    setQuoteCurrencies(prev => prev.includes(q) ? prev.filter(x=>x!==q) : [...prev,q]);
+  };
+  const toggleChainOnly = () => {
+    setChainOnly(v => { if (!v) setQuoteCurrencies([]); return !v; });
+  };
+
+  const needsStableHub  = site==='Global' && product==='RFQ';
+  const needsLaunchpool = site==='ID';
+  const canCreate = site && product && tokenType && tokenSymbol.trim()
+    && (!needsStableHub  || stableHub  !== null)
+    && (!needsLaunchpool || launchpool !== null);
+
+  const toggleChain = (id) => setChains(prev => prev.includes(id) ? prev.filter(c=>c!==id) : [...prev, id]);
+  const addCustomChain = () => {
+    const v = customChain.trim();
+    if (!v) return;
+    const id = 'CUSTOM_'+v.toUpperCase();
+    if (!chains.includes(id)) setChains(prev=>[...prev, id]);
+    setCustomChain('');
+  };
+  // Derive display name
+  const derivedName = () => {
+    const sym = tokenSymbol.trim();
+    if (!sym) return '';
+    if (chainOnly) return `${sym}（仅上链）`;
+    if (quoteCurrencies.length > 0) return quoteCurrencies.map(q=>`${sym}/${q}`).join(', ');
+    return sym;
+  };
+
+  const doCreate = () => {
+    const sh = needsStableHub  ? !!stableHub  : false;
+    const lp = needsLaunchpool ? !!launchpool : false;
+    const chainLabels = chains.map(id => {
+      const c = CHAINS.find(c=>c.id===id);
+      return c ? c.tag : id.replace('CUSTOM_','');
+    });
+    const record = {
+      id: genId(),
+      tokenName: derivedName(),
+      tokenSymbol: tokenSymbol.trim(),
+      quoteCurrencies, chainOnly,
+      chains, chainLabels,
+      userType,
+      site, product, tokenType, stableHub: sh, launchpool: lp,
+      checked: {}, notes: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      estimatedTime: estimateTime(site, product, tokenType),
+    };
+    onSave(record);
+  };
+
+  const handleCreate = () => {
+    if (!canCreate) return;
+    const sym = tokenSymbol.trim().toLowerCase();
+    const matches = (existingRecords || []).filter(r =>
+      (r.tokenSymbol||r.tokenName).trim().toLowerCase() === sym &&
+      r.site === site && r.product === product
+    );
+    if (matches.length > 0) setDupWarning({ matches });
+    else doCreate();
+  };
+
+  const sInfo = SITES.find(s=>s.id===site);
+
+  return (
+    <div>
+      {/* Duplicate warning modal */}
+      {dupWarning && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
+          <div style={{background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:460, boxShadow:'0 8px 40px rgba(0,0,0,0.18)'}}>
+            <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:8}}>
+              <span style={{fontSize:22}}>⚠️</span>
+              <div style={{fontWeight:800, fontSize:17, color:'#92400E'}}>疑似重复任务</div>
+            </div>
+            <div style={{fontSize:13, color:'#6B7280', marginBottom:16}}>
+              已找到 <strong>{dupWarning.matches.length}</strong> 条相同币种 + 站点 + 产品的记录，可能是重复创建：
+            </div>
+            <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:20}}>
+              {dupWarning.matches.map(r => {
+                const cl = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
+                const st = getRecordStatus(r, cl.length);
+                const sm = STATUS_META[st];
+                const done = Object.values(r.checked||{}).filter(Boolean).length;
+                return (
+                  <div key={r.id} style={{background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:10, padding:'10px 14px', display:'flex', alignItems:'center', gap:12}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700, fontSize:14, color:'#111827'}}>{r.tokenName}</div>
+                      <div style={{fontSize:12, color:'#6B7280', marginTop:2}}>
+                        {SITES.find(s=>s.id===r.site)?.icon} {r.site} · {r.product} · 创建于 {fmtDate(r.createdAt)}
+                      </div>
+                      <div style={{fontSize:12, marginTop:3}}>
+                        <span style={{background:sm.bg, color:sm.color, padding:'1px 8px', borderRadius:99, fontWeight:700}}>{sm.label}</span>
+                        <span style={{color:'#9CA3AF', marginLeft:8}}>{done}/{cl.length} 步骤已完成</span>
+                      </div>
+                    </div>
+                    <button onClick={()=>{ setDupWarning(null); onOpenExisting(r.id); }} style={{background:'none', border:'1px solid #D1FAE5', color:'#059669', borderRadius:8, padding:'6px 12px', fontSize:12, cursor:'pointer', fontWeight:700, whiteSpace:'nowrap'}}>查看</button>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
+              <button onClick={()=>setDupWarning(null)} style={{border:'1px solid #E5E7EB', background:'white', borderRadius:9, padding:'9px 18px', fontSize:13, cursor:'pointer', color:'#6B7280', fontWeight:600}}>返回修改</button>
+              <button onClick={()=>{ setDupWarning(null); doCreate(); }} style={{border:'none', background:'#2E75B6', color:'white', borderRadius:9, padding:'9px 20px', fontSize:13, cursor:'pointer', fontWeight:700}}>仍然创建</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{background:C.navy, padding:'16px 24px', display:'flex', alignItems:'center', gap:16}}>
+        <button className="btn" onClick={onCancel} style={{background:'rgba(255,255,255,0.15)', border:'none', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13}}>← 返回</button>
+        <div style={{color:'white', fontWeight:700, fontSize:16}}>新建上币任务</div>
+      </div>
+
+      <div style={{maxWidth:700, margin:'0 auto', padding:'24px 16px'}}>
+        {/* Token info — 3 sections */}
+        <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
+          <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:16}}>币种信息</div>
+
+          {/* 币种代号 */}
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:6}}>
+              币种代号 <span style={{color:'#DC2626'}}>*</span>
+            </div>
+            <input value={tokenSymbol} onChange={e=>setTokenSymbol(e.target.value)}
+              placeholder="例如：BTC、ETH、DOGE"
+              style={{width:'100%', border:'2px solid #E5E7EB', borderRadius:10, padding:'11px 14px', fontSize:15, fontFamily:'inherit'}}/>
+          </div>
+
+          {/* 交易对（右币多选 + 仅上链） */}
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:8}}>
+              交易对 <span style={{fontSize:12, fontWeight:400, color:'#9CA3AF'}}>（可选）</span>
+            </div>
+            <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
+              {/* Base currency badge */}
+              {tokenSymbol.trim() && (
+                <span style={{fontSize:14, fontWeight:700, color:'#374151', background:'#F3F4F6', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'6px 12px'}}>{tokenSymbol.trim()}</span>
+              )}
+              {tokenSymbol.trim() && <span style={{fontSize:16, color:'#9CA3AF', fontWeight:300}}>/</span>}
+              {/* Quote currency chips */}
+              {QUOTE_OPTIONS.map(q => {
+                const sel = quoteCurrencies.includes(q);
+                return (
+                  <button key={q} onClick={()=>toggleQuote(q)} disabled={chainOnly} style={{
+                    border:`1.5px solid ${sel?'#2E75B6':'#E5E7EB'}`,
+                    borderRadius:8, padding:'6px 14px', cursor: chainOnly?'not-allowed':'pointer',
+                    background: sel?'#EBF4FB': chainOnly?'#F9FAFB':'white',
+                    fontSize:13, fontWeight: sel?700:500,
+                    color: sel?C.navy: chainOnly?'#D1D5DB':'#374151',
+                    transition:'all 0.12s',
+                  }}>{sel && '✓ '}{q}</button>
+                );
+              })}
+              {/* Divider */}
+              <span style={{fontSize:12, color:'#D1D5DB', fontWeight:400, padding:'0 2px'}}>或</span>
+              {/* 仅上链 */}
+              <button onClick={toggleChainOnly} style={{
+                border:`1.5px solid ${chainOnly?'#7C3AED':'#E5E7EB'}`,
+                borderRadius:8, padding:'6px 14px', cursor:'pointer',
+                background: chainOnly?'#EDE9FE':'white',
+                fontSize:13, fontWeight: chainOnly?700:500,
+                color: chainOnly?'#7C3AED':'#374151',
+                transition:'all 0.12s',
+              }}>{chainOnly && '✓ '}仅上链</button>
+            </div>
+            {/* 自定义交易对 */}
+            {!chainOnly && (
+              <div style={{display:'flex', gap:8, alignItems:'center', marginTop:10}}>
+                <input value={customQuote} onChange={e=>setCustomQuote(e.target.value)}
+                  onKeyDown={e=>e.key==='Enter'&&addCustomQuote()}
+                  placeholder="其他右币，如 ETH、EUR…"
+                  style={{flex:1, border:'1.5px solid #E5E7EB', borderRadius:8, padding:'6px 12px', fontSize:13, fontFamily:'inherit', outline:'none'}}/>
+                <button onClick={addCustomQuote} style={{background:C.blue, color:'white', border:'none', borderRadius:8, padding:'6px 14px', fontSize:13, cursor:'pointer', fontWeight:600, whiteSpace:'nowrap'}}>+ 添加</button>
+              </div>
+            )}
+            {/* 已选自定义右币（不在预设列表中的） */}
+            {!chainOnly && quoteCurrencies.filter(q=>!QUOTE_OPTIONS.includes(q)).map(q=>(
+              <span key={q} style={{display:'inline-flex', alignItems:'center', gap:5, marginTop:6, marginRight:6, background:'#EBF4FB', border:'1.5px solid #2E75B6', borderRadius:8, padding:'4px 10px', fontSize:12, color:C.navy, fontWeight:700}}>
+                {q}
+                <span onClick={()=>setQuoteCurrencies(prev=>prev.filter(x=>x!==q))} style={{cursor:'pointer', color:'#9CA3AF', fontSize:14, lineHeight:1}}>×</span>
+              </span>
+            ))}
+            {/* 预览 */}
+            {(quoteCurrencies.length>0 || chainOnly) && tokenSymbol.trim() && (
+              <div style={{marginTop:8, fontSize:12, color:'#6B7280'}}>
+                任务将展示为：<strong style={{color:'#374151'}}>{derivedName()}</strong>
+                {chainOnly && <span style={{marginLeft:8, color:'#9CA3AF'}}>（各站点流程有差异，待补充）</span>}
+              </div>
+            )}
+          </div>
+
+          {/* 区块链（多选） */}
+          <div>
+            <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:8}}>
+              上线区块链 <span style={{fontSize:12, fontWeight:400, color:'#9CA3AF'}}>（多选）</span>
+            </div>
+            <div style={{display:'flex', flexWrap:'wrap', gap:8, marginBottom:10}}>
+              {CHAINS.map(c => {
+                const sel = chains.includes(c.id);
+                return (
+                  <button key={c.id} onClick={()=>toggleChain(c.id)} style={{
+                    border:`1.5px solid ${sel?'#2E75B6':'#E5E7EB'}`,
+                    borderRadius:8, padding:'5px 12px', cursor:'pointer',
+                    background: sel?'#EBF4FB':'white',
+                    fontSize:12, fontWeight: sel?700:400,
+                    color: sel?C.navy:'#374151', transition:'all 0.1s',
+                  }}>
+                    {sel && <span style={{marginRight:4}}>✓</span>}{c.tag}
+                    <span style={{fontSize:11, color: sel?'#6096C4':'#9CA3AF', marginLeft:4}}>{c.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* 自定义链 */}
+            <div style={{display:'flex', gap:8, alignItems:'center'}}>
+              <input value={customChain} onChange={e=>setCustomChain(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&addCustomChain()}
+                placeholder="其他链…"
+                style={{flex:1, border:'1.5px solid #E5E7EB', borderRadius:8, padding:'6px 12px', fontSize:13, fontFamily:'inherit', outline:'none'}}/>
+              <button onClick={addCustomChain} style={{background:C.blue, color:'white', border:'none', borderRadius:8, padding:'6px 14px', fontSize:13, cursor:'pointer', fontWeight:600, whiteSpace:'nowrap'}}>+ 添加</button>
+            </div>
+            {/* 已选自定义链 */}
+            {chains.filter(id=>id.startsWith('CUSTOM_')).map(id=>(
+              <span key={id} style={{display:'inline-flex', alignItems:'center', gap:5, marginTop:6, marginRight:6, background:'#EBF4FB', border:'1.5px solid #2E75B6', borderRadius:8, padding:'4px 10px', fontSize:12, color:C.navy, fontWeight:700}}>
+                {id.replace('CUSTOM_','')}
+                <span onClick={()=>setChains(prev=>prev.filter(c=>c!==id))} style={{cursor:'pointer', color:'#9CA3AF', fontSize:14, lineHeight:1}}>×</span>
+              </span>
+            ))}
+            {chains.length > 0 && (
+              <div style={{marginTop:8, fontSize:12, color:'#6B7280'}}>
+                已选：{chains.map(id=>{const c=CHAINS.find(c=>c.id===id); return c?c.tag:id.replace('CUSTOM_','');}).join('、')}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Site */}
+        <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
+          <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:12}}>上线站点</div>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10}}>
+            {SITES.map(s=>(
+              <button key={s.id} onClick={()=>{setSite(s.id);setProduct(null);setStableHub(null);setLaunchpool(null);}}
+                style={{border:`2px solid ${site===s.id?s.color:'#E5E7EB'}`, borderRadius:12, padding:'14px 10px', cursor:'pointer', background:site===s.id?s.bg:'white', textAlign:'left'}}>
+                <div style={{fontSize:20, marginBottom:5}}>{s.icon}</div>
+                <div style={{fontWeight:700, fontSize:13, color:site===s.id?s.color:'#374151'}}>{s.label}</div>
+                <div style={{fontSize:11, color:'#6B7280', marginTop:3}}>{s.note}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Product */}
+        {site && (
+          <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
+            <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:12}}>产品类型</div>
+            <div style={{display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10}}>
+              {PRODUCTS.filter(p=>!(p.id==='Perp'&&site!=='Global')).map(p=>(
+                <button key={p.id} onClick={()=>{setProduct(p.id);setStableHub(null);}}
+                  style={{border:`2px solid ${product===p.id?'#2E75B6':'#E5E7EB'}`, borderRadius:12, padding:'14px 16px', cursor:'pointer', background:product===p.id?'#EBF4FB':'white', textAlign:'left'}}>
+                  <div style={{fontSize:20, marginBottom:5}}>{p.icon}</div>
+                  <div style={{fontWeight:700, fontSize:13, color:product===p.id?C.navy:'#374151'}}>{p.label}</div>
+                  <div style={{fontSize:11, color:'#6B7280', marginTop:3}}>{p.note}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Token type */}
+        {site && product && (
+          <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
+            <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:12}}>代币类型</div>
+            <div style={{display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10}}>
+              {TOKEN_TYPES.map(t=>(
+                <button key={t.id} onClick={()=>setTokenType(t.id)}
+                  style={{border:`2px solid ${tokenType===t.id?C.teal:'#E5E7EB'}`, borderRadius:12, padding:'14px 16px', cursor:'pointer', background:tokenType===t.id?'#D4EFEC':'white', textAlign:'left'}}>
+                  <div style={{fontSize:20, marginBottom:5}}>{t.icon}</div>
+                  <div style={{fontWeight:700, fontSize:13, color:tokenType===t.id?C.teal:'#374151'}}>{t.label}</div>
+                  <div style={{fontSize:11, color:'#6B7280', marginTop:3}}>{t.note}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* StableHub option — Global RFQ only */}
+        {needsStableHub && tokenType && (
+          <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16, border: stableHub===null ? '2px solid #FDE68A' : '2px solid #E5E7EB'}}>
+            <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:4}}>是否同步上线 StableHub？</div>
+            <div style={{fontSize:12, color:'#6B7280', marginBottom:14}}>StableHub 为稳定币 1:1 兑换产品，需额外配置限额、底仓及通知产研</div>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+              <button onClick={()=>setStableHub(true)} style={{
+                border:`2px solid ${stableHub===true ? '#1A7A6E' : '#E5E7EB'}`,
+                borderRadius:12, padding:'16px', cursor:'pointer',
+                background: stableHub===true ? '#D4EFEC' : 'white', textAlign:'left',
+              }}>
+                <div style={{fontSize:20, marginBottom:6}}>✅</div>
+                <div style={{fontWeight:700, fontSize:13, color: stableHub===true ? C.teal : '#374151'}}>是，上 StableHub</div>
+                <div style={{fontSize:11, color:'#6B7280', marginTop:3}}>同步加入 4 项 StableHub 专属流程</div>
+              </button>
+              <button onClick={()=>setStableHub(false)} style={{
+                border:`2px solid ${stableHub===false ? '#6B7280' : '#E5E7EB'}`,
+                borderRadius:12, padding:'16px', cursor:'pointer',
+                background: stableHub===false ? '#F3F4F6' : 'white', textAlign:'left',
+              }}>
+                <div style={{fontSize:20, marginBottom:6}}>➖</div>
+                <div style={{fontWeight:700, fontSize:13, color: stableHub===false ? '#374151' : '#374151'}}>否，仅 RFQ</div>
+                <div style={{fontSize:11, color:'#6B7280', marginTop:3}}>标准 Global RFQ 流程，不含 StableHub</div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Launchpool option — ID站专属 */}
+        {needsLaunchpool && tokenType && (
+          <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16, border: launchpool===null ? '2px solid #FDE68A' : '2px solid #E5E7EB'}}>
+            <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:4}}>是否同步上线 Launchpool？</div>
+            <div style={{fontSize:12, color:'#6B7280', marginBottom:14}}>Launchpool 为质押挖矿活动，需额外配置奖励、APR、公告及后台参数</div>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+              <button onClick={()=>setLaunchpool(true)} style={{
+                border:`2px solid ${launchpool===true?C.purple:'#E5E7EB'}`,
+                borderRadius:12, padding:'16px', cursor:'pointer',
+                background: launchpool===true?'#EAD9F7':'white', textAlign:'left',
+              }}>
+                <div style={{fontSize:20, marginBottom:6}}>🏊</div>
+                <div style={{fontWeight:700, fontSize:13, color:launchpool===true?C.purple:'#374151'}}>是，上 Launchpool</div>
+                <div style={{fontSize:11, color:'#6B7280', marginTop:3}}>新增 5 项 Launchpool 专属流程</div>
+              </button>
+              <button onClick={()=>setLaunchpool(false)} style={{
+                border:`2px solid ${launchpool===false?'#6B7280':'#E5E7EB'}`,
+                borderRadius:12, padding:'16px', cursor:'pointer',
+                background: launchpool===false?'#F3F4F6':'white', textAlign:'left',
+              }}>
+                <div style={{fontSize:20, marginBottom:6}}>➖</div>
+                <div style={{fontWeight:700, fontSize:13, color:'#374151'}}>否，标准上币</div>
+                <div style={{fontSize:11, color:'#6B7280', marginTop:3}}>标准印尼站流程，不含 Launchpool</div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 用户类型（可选） */}
+        {site && product && tokenType && (
+          <div style={{background:'white', borderRadius:16, padding:20, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
+            <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:10}}>用户类型 <span style={{fontSize:12, fontWeight:400, color:'#9CA3AF'}}>（可选）</span></div>
+            <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+              {['PI（专业投资者）','零售 Retail','两者','不适用'].map(opt=>(
+                <button key={opt} onClick={()=>setUserType(userType===opt?'':opt)} style={{
+                  border:`1.5px solid ${userType===opt?C.navy:'#E5E7EB'}`,
+                  borderRadius:8, padding:'7px 14px', cursor:'pointer',
+                  background: userType===opt?'#D6E4F0':'white',
+                  fontSize:13, fontWeight: userType===opt?700:400,
+                  color: userType===opt?C.navy:'#374151',
+                }}>{opt}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Create button */}
+        {canCreate && (
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:13, color:'#6B7280', marginBottom:12}}>
+              <strong style={{color:'#111827'}}>{derivedName()}</strong>
+              {chains.length>0 && <span style={{marginLeft:8, color:'#0369A1'}}>{chains.map(id=>{const c=CHAINS.find(c=>c.id===id);return c?c.tag:id.replace('CUSTOM_','');}).join(' / ')}</span>}
+              &nbsp;·&nbsp;{sInfo?.icon} {sInfo?.label} · {PRODUCTS.find(p=>p.id===product)?.icon} {PRODUCTS.find(p=>p.id===product)?.label} · {tokenType==='newchain'?'⛓️ 新链':'🪙 子代币'}
+              &nbsp;·&nbsp;预计 <strong>{estimateTime(site, product, tokenType)}</strong>
+            </div>
+            <button className="btn" onClick={handleCreate} style={{
+              background:C.navy, color:'white', border:'none', borderRadius:12,
+              padding:'14px 40px', fontSize:16, fontWeight:700, cursor:'pointer',
+              boxShadow:'0 4px 12px rgba(27,58,107,0.3)',
+            }}>创建并进入 CheckList →</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Checklist View ────────────────────────────────────────────────────────────
+function ChecklistView({ record, onBack, onUpdate, addToast }) {
+  const checklist = useMemo(()=>buildChecklist(record.site, record.product, record.tokenType, {stableHub: record.stableHub, launchpool: record.launchpool}),[record]);
+  const [expandedSteps, setExpandedSteps] = useState({});
+  const [editNote, setEditNote] = useState(false);
+  const [noteText, setNoteText] = useState(record.notes||'');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+
+  const checked = record.checked || {};
+  const done = Object.values(checked).filter(Boolean).length;
+  const total = checklist.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  const isCancelled = !!record.cancelled;
+  const isComplete = !isCancelled && done===total && total>0;
+
+  const handleCancelConfirm = () => {
+    if (!cancelReason.trim()) return;
+    onUpdate({...record, cancelled: true, cancelReason: cancelReason.trim(), updatedAt: new Date().toISOString()});
+    setShowCancelModal(false);
+    setCancelReason('');
+  };
+  const handleRestore = () => {
+    onUpdate({...record, cancelled: false, cancelReason: '', updatedAt: new Date().toISOString()});
+  };
+
+  const toggle = (idx) => {
+    const newChecked = {...checked, [idx]: !checked[idx]};
+    const updated = {...record, checked:newChecked, updatedAt:new Date().toISOString()};
+    const step = checklist[idx];
+    const nowDone = !checked[idx];
+    const newTotal = Object.values(newChecked).filter(Boolean).length;
+    let msg = nowDone ? `✅ ${step.task.slice(0,28)}` : `↩ 撤销：${step.task.slice(0,24)}`;
+    if (nowDone && newTotal === checklist.length) msg = `🎉 ${record.tokenName} 全部完成！`;
+    onUpdate(updated, msg);
+  };
+
+  const saveNote = () => {
+    onUpdate({...record, notes:noteText, updatedAt:new Date().toISOString()}, `📝 备注已更新：${record.tokenName}`);
+    setEditNote(false);
+  };
+
+  // Group by phase
+  const phases = [];
+  let cur = null;
+  checklist.forEach((step,i)=>{
+    if (!cur || cur.name!==step.phase) { cur={name:step.phase,tag:step.tag,steps:[]}; phases.push(cur); }
+    cur.steps.push({...step,idx:i});
+  });
+
+  const siteInfo = SITES.find(s=>s.id===record.site);
+  const prodInfo = PRODUCTS.find(p=>p.id===record.product);
+
+  return (
+    <div>
+      {/* Cancel reason modal */}
+      {showCancelModal && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
+          <div style={{background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:440, boxShadow:'0 8px 40px rgba(0,0,0,0.18)'}}>
+            <div style={{fontWeight:800, fontSize:17, color:'#111827', marginBottom:6}}>取消上币任务</div>
+            <div style={{fontSize:13, color:'#6B7280', marginBottom:18}}>进度数据会完整保留，可随时恢复。请说明取消原因：</div>
+            <textarea
+              autoFocus
+              value={cancelReason}
+              onChange={e=>setCancelReason(e.target.value)}
+              placeholder="例如：项目方撤回申请、合规未通过、暂缓上线..."
+              rows={4}
+              style={{width:'100%', border:'2px solid #E5E7EB', borderRadius:10, padding:'10px 12px', fontSize:14, fontFamily:'inherit', resize:'vertical', outline:'none'}}
+              onFocus={e=>e.target.style.borderColor='#2E75B6'}
+              onBlur={e=>e.target.style.borderColor='#E5E7EB'}
+            />
+            <div style={{display:'flex', gap:10, marginTop:16, justifyContent:'flex-end'}}>
+              <button onClick={()=>setShowCancelModal(false)} style={{border:'1px solid #E5E7EB', background:'white', borderRadius:9, padding:'9px 18px', fontSize:13, cursor:'pointer', color:'#6B7280', fontWeight:600}}>返回</button>
+              <button onClick={handleCancelConfirm} disabled={!cancelReason.trim()} style={{border:'none', background: cancelReason.trim() ? '#DC2626' : '#F3F4F6', color: cancelReason.trim() ? 'white' : '#9CA3AF', borderRadius:9, padding:'9px 20px', fontSize:13, cursor: cancelReason.trim() ? 'pointer' : 'not-allowed', fontWeight:700}}>确认取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Header */}
+      <div style={{background:C.navy, padding:'16px 24px'}} className="no-print">
+        <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
+          <button className="btn" onClick={onBack} style={{background:'rgba(255,255,255,0.15)', border:'none', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13}}>← 返回列表</button>
+          <button className="btn" onClick={()=>window.print()} style={{background:'rgba(255,255,255,0.15)', border:'none', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13}}>🖨 打印</button>
+          {isCancelled
+            ? <button className="btn" onClick={handleRestore} style={{marginLeft:'auto', background:'rgba(16,185,129,0.25)', border:'1px solid rgba(16,185,129,0.5)', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13, fontWeight:600}}>↩ 恢复任务</button>
+            : <button className="btn" onClick={()=>{setCancelReason('');setShowCancelModal(true);}} style={{marginLeft:'auto', background:'rgba(220,38,38,0.25)', border:'1px solid rgba(220,38,38,0.5)', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13, fontWeight:600}}>✕ 取消任务</button>
+          }
+        </div>
+        <div style={{display:'flex', alignItems:'center', gap:10}}>
+          <div style={{color:'white', fontWeight:800, fontSize:18}}>{record.tokenName}</div>
+          {isCancelled && <span style={{background:'rgba(156,163,175,0.35)', color:'white', fontSize:12, fontWeight:700, padding:'2px 10px', borderRadius:99, border:'1px solid rgba(255,255,255,0.3)'}}>已取消</span>}
+        </div>
+        <div style={{color:'rgba(255,255,255,0.7)', fontSize:13, marginTop:3}}>
+          {siteInfo?.icon} {siteInfo?.label} · {prodInfo?.icon} {prodInfo?.label} · {record.tokenType==='newchain'?'⛓️ 新链':'🪙 子代币'} · 预计 {record.estimatedTime}
+        </div>
+      </div>
+
+      <div style={{maxWidth:900, margin:'0 auto', padding:'20px 16px'}}>
+        {/* Progress */}
+        <div style={{background:'white', borderRadius:14, padding:'16px 20px', marginBottom:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', display:'flex', alignItems:'center', gap:16}}>
+          <ProgressRing pct={pct} size={56} stroke={5}/>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700, color: isCancelled?'#9CA3AF':isComplete?C.green:C.navy, fontSize:15}}>
+              {isCancelled ? '🚫 已取消' : isComplete ? '🎉 全部完成！' : `${done} / ${total} 步骤完成`}
+            </div>
+            <div style={{background:'#E5E7EB', borderRadius:99, height:7, marginTop:8, overflow:'hidden'}}>
+              <div style={{width:`${pct}%`, height:'100%', background:isComplete?'#059669':'#2E75B6', borderRadius:99, transition:'width 0.3s'}}/>
+            </div>
+          </div>
+          <div style={{fontSize:12, color:'#9CA3AF', textAlign:'right'}}>
+            <div>创建：{fmtDate(record.createdAt)}</div>
+            <div>更新：{fmtDate(record.updatedAt)}</div>
+          </div>
+        </div>
+
+        {/* Cancelled banner */}
+        {isCancelled && record.cancelReason && (
+          <div style={{background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:12, padding:'12px 16px', marginBottom:14, display:'flex', gap:10, alignItems:'flex-start'}}>
+            <span style={{fontSize:16, flexShrink:0}}>🚫</span>
+            <div>
+              <div style={{fontSize:12, fontWeight:700, color:'#B91C1C', marginBottom:2}}>取消原因</div>
+              <div style={{fontSize:13, color:'#374151'}}>{record.cancelReason}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        <div style={{background:'white', borderRadius:14, padding:'14px 18px', marginBottom:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #E5E7EB'}} className="no-print">
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: editNote?10:0}}>
+            <span style={{fontSize:13, fontWeight:700, color:'#374151'}}>📝 任务备注</span>
+            {!editNote ? (
+              <button onClick={()=>setEditNote(true)} style={{background:'none', border:'1px solid #E5E7EB', borderRadius:7, padding:'4px 10px', fontSize:12, cursor:'pointer', color:'#6B7280'}}>编辑</button>
+            ) : (
+              <div style={{display:'flex', gap:6}}>
+                <button onClick={()=>{setEditNote(false);setNoteText(record.notes||'');}} style={{background:'none', border:'1px solid #E5E7EB', borderRadius:7, padding:'4px 10px', fontSize:12, cursor:'pointer', color:'#6B7280'}}>取消</button>
+                <button onClick={saveNote} style={{background:C.blue, border:'none', borderRadius:7, padding:'4px 12px', fontSize:12, cursor:'pointer', color:'white', fontWeight:700}}>保存</button>
+              </div>
+            )}
+          </div>
+          {editNote ? (
+            <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} rows={3}
+              placeholder="记录进展、特殊说明、联系结果..."
+              style={{width:'100%', border:'2px solid #E5E7EB', borderRadius:8, padding:'10px', fontSize:13, fontFamily:'inherit', resize:'vertical'}}/>
+          ) : (
+            noteText ? <div style={{fontSize:13, color:'#4B5563', marginTop:6, lineHeight:1.6}}>{noteText}</div>
+                     : <div style={{fontSize:12, color:'#D1D5DB', marginTop:2}}>点击编辑添加备注...</div>
+          )}
+        </div>
+
+        {/* Phase groups */}
+        {phases.map((phase,pi)=>{
+          const pc = PHASE_COLORS[phase.tag]||PHASE_COLORS.exec;
+          const pd = phase.steps.filter(s=>checked[s.idx]).length;
+          return (
+            <div key={pi} style={{marginBottom:12}}>
+              <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6, padding:'0 4px'}}>
+                <div style={{background:pc.border, borderRadius:99, padding:'3px 12px', fontSize:12, fontWeight:700, color:'white'}}>{phase.name}</div>
+                <div style={{fontSize:12, color:'#9CA3AF'}}>{pd}/{phase.steps.length} 完成</div>
+              </div>
+              {phase.steps.map(step=>{
+                const isDone = !!checked[step.idx];
+                const isExp = !!expandedSteps[step.idx];
+                const hasNote = step.note && step.note.trim();
+                return (
+                  <div key={step.idx} style={{
+                    background: isDone?'#F0FDF4':'white',
+                    border:`1px solid ${isDone?'#86EFAC':step.critical?'#FCA5A5':'#E5E7EB'}`,
+                    borderLeft:`4px solid ${isDone?'#22C55E':step.critical?'#EF4444':pc.border}`,
+                    borderRadius:10, marginBottom:8, overflow:'hidden',
+                    boxShadow:'0 1px 4px rgba(0,0,0,0.04)', transition:'all 0.15s',
+                  }}>
+                    <div style={{display:'flex', alignItems:'flex-start', padding:'12px 14px', gap:12, cursor:'pointer'}}
+                      onClick={()=>toggle(step.idx)}>
+                      <div style={{width:22,height:22,borderRadius:6,border:`2px solid ${isDone?'#22C55E':'#D1D5DB'}`,
+                        background:isDone?'#22C55E':'white',display:'flex',alignItems:'center',justifyContent:'center',
+                        flexShrink:0,marginTop:1,transition:'all 0.15s'}}>
+                        {isDone && <span style={{color:'white',fontSize:13,fontWeight:900}}>✓</span>}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                          <span style={{fontWeight:700,fontSize:14,color:isDone?'#6B7280':'#111827',textDecoration:isDone?'line-through':'none'}}>
+                            {step.idx+1}. {step.task}
+                          </span>
+                          {step.critical && !isDone && <span style={{background:'#FEE2E2',color:'#DC2626',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:99}}>关键</span>}
+                        </div>
+                        <div style={{display:'flex',gap:12,marginTop:5,flexWrap:'wrap'}}>
+                          <span style={{fontSize:12,color:'#4B5563'}}>👤 {step.owner}</span>
+                          <span style={{fontSize:12,color:'#2E75B6',fontWeight:600}}>📞 {step.contact}</span>
+                          <span style={{fontSize:12,color:'#6B7280'}}>⏱ {step.time}</span>
+                        </div>
+                      </div>
+                      {hasNote && (
+                        <button onClick={e=>{e.stopPropagation();setExpandedSteps(p=>({...p,[step.idx]:!p[step.idx]}));}}
+                          style={{background:'none',border:'none',cursor:'pointer',fontSize:16,color:'#9CA3AF',flexShrink:0,padding:'0 4px'}}>
+                          {isExp?'▲':'▼'}
+                        </button>
+                      )}
+                    </div>
+                    {hasNote && isExp && (
+                      <div style={{background:'#F8FAFC',borderTop:'1px solid #E5E7EB',padding:'10px 14px 10px 50px'}}>
+                        {step.note.split('\n').map((l,i)=>(
+                          <div key={i} style={{fontSize:12,color:'#4B5563',lineHeight:1.6}}>{l}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Completed Table ──────────────────────────────────────────────────────────
+function CompletedTable({ records, onBack }) {
+  const [copied, setCopied] = useState(false);
+
+  const completed = records.filter(r => getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}).length) === 'completed');
+
+  const COLS = ['Token','区块链','交易对','站点','交易类型','用户类型','上线时间'];
+  const toRow = r => [
+    r.tokenSymbol || r.tokenName,
+    (r.chainLabels||[]).join(' / ') || '—',
+    r.chainOnly ? '仅上链' : (r.quoteCurrencies||[]).length>0 ? (r.quoteCurrencies).map(q=>`${r.tokenSymbol||r.tokenName}/${q}`).join(', ') : r.tokenName,
+    r.site,
+    r.product + (r.stableHub?' +SH':''),
+    r.userType || '—',
+    r.expectedLaunchTime ? fmtLaunchTime(r.expectedLaunchTime) : fmtDate(r.updatedAt),
+  ];
+
+  const exportExcel = () => {
+    const ws = XLSX.utils.aoa_to_sheet([COLS, ...completed.map(toRow)]);
+    // Column widths
+    ws['!cols'] = [16,20,30,10,14,16,16].map(w=>({wch:w}));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '已完成上币');
+    XLSX.writeFile(wb, `OSL已完成上币_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  const copyTSV = () => {
+    const lines = [COLS, ...completed.map(toRow)].map(r=>r.join('\t')).join('\n');
+    navigator.clipboard.writeText(lines).then(()=>{
+      setCopied(true); setTimeout(()=>setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div>
+      <div style={{background:C.navy, padding:'16px 24px', display:'flex', alignItems:'center', gap:16}}>
+        <button className="btn" onClick={onBack} style={{background:'rgba(255,255,255,0.15)', border:'none', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13}}>← 返回</button>
+        <div style={{color:'white', fontWeight:700, fontSize:16}}>已完成上币记录</div>
+        <div style={{marginLeft:'auto', display:'flex', gap:8}}>
+          <button onClick={copyTSV} style={{background:'rgba(255,255,255,0.15)', border:'none', color:'white', borderRadius:8, padding:'7px 16px', cursor:'pointer', fontSize:13, fontWeight:600}}>
+            {copied ? '✓ 已复制' : '📋 一键复制'}
+          </button>
+          <button onClick={exportExcel} style={{background:'#059669', border:'none', color:'white', borderRadius:8, padding:'7px 16px', cursor:'pointer', fontSize:13, fontWeight:700}}>
+            ⬇ 导出 Excel
+          </button>
+        </div>
+      </div>
+      <div style={{maxWidth:1000, margin:'0 auto', padding:'20px 16px'}}>
+        {completed.length === 0 ? (
+          <div style={{textAlign:'center', padding:'60px 0', color:'#9CA3AF'}}>
+            <div style={{fontSize:40, marginBottom:12}}>🎉</div>
+            <div style={{fontSize:15, fontWeight:600}}>暂无已完成的上币任务</div>
+          </div>
+        ) : (
+          <div style={{background:'white', borderRadius:14, overflow:'hidden', boxShadow:'0 1px 6px rgba(0,0,0,0.07)'}}>
+            <table style={{width:'100%', borderCollapse:'collapse', fontSize:13}}>
+              <thead>
+                <tr style={{background:'#F8FAFC'}}>
+                  {COLS.map(col=>(
+                    <th key={col} style={{padding:'10px 14px', textAlign:'left', fontWeight:700, color:'#374151', borderBottom:'2px solid #E5E7EB', whiteSpace:'nowrap'}}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {completed.map((r,i)=>{
+                  const row = toRow(r);
+                  const siteInfo = SITES.find(s=>s.id===r.site);
+                  return (
+                    <tr key={r.id} style={{background: i%2===0?'white':'#F9FAFB', borderBottom:'1px solid #F3F4F6'}}>
+                      <td style={{padding:'10px 14px', fontWeight:700, color:'#111827'}}>{row[0]}</td>
+                      <td style={{padding:'10px 14px', color:'#0369A1'}}>{row[1]}</td>
+                      <td style={{padding:'10px 14px', color:'#374151'}}>{row[2]}</td>
+                      <td style={{padding:'10px 14px'}}>
+                        <span style={{background:siteInfo?.bg, color:siteInfo?.color, fontWeight:700, fontSize:11, padding:'2px 8px', borderRadius:99}}>{siteInfo?.icon} {r.site}</span>
+                      </td>
+                      <td style={{padding:'10px 14px', color:'#374151'}}>{row[4]}</td>
+                      <td style={{padding:'10px 14px', color:'#6B7280'}}>{row[5]}</td>
+                      <td style={{padding:'10px 14px', color:'#D97706', fontWeight:600}}>{row[6]}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{padding:'10px 16px', background:'#F8FAFC', borderTop:'1px solid #E5E7EB', fontSize:12, color:'#9CA3AF'}}>
+              共 {completed.length} 条记录
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── App shell ────────────────────────────────────────────────────────────────
+function App() {
+  const [records, setRecords] = useState(()=>loadRecords());
+  const [view, setView] = useState('dashboard');
+  const [activeId, setActiveId] = useState(null);
+  const [toasts, setToasts] = useState([]);
+
+  useEffect(()=>{ saveRecords(records); }, [records]);
+
+  const addToast = (msg, type='info') => {
+    const id = Date.now() + Math.random();
+    setToasts(prev=>[...prev, {id, msg, type}]);
+    setTimeout(()=>setToasts(prev=>prev.filter(t=>t.id!==id)), 3500);
+  };
+
+  const activeRecord = records.find(r=>r.id===activeId);
+
+  const handleSave = (record) => {
+    setRecords(prev=>[...prev, record]);
+    setActiveId(record.id);
+    setView('checklist');
+    addToast(`🆕 已创建任务：${record.tokenName}`, 'success');
+  };
+
+  const handleUpdate = (updated, toastMsg='') => {
+    setRecords(prev=>prev.map(r=>r.id===updated.id?updated:r));
+    if (toastMsg) addToast(toastMsg);
+  };
+
+  const handleDelete = (id, reason='') => {
+    const r = records.find(r=>r.id===id);
+    setRecords(prev=>prev.map(r=>r.id===id ? {...r, cancelled:true, cancelReason:reason, updatedAt:new Date().toISOString()} : r));
+    addToast(`⏸ 已取消：${r?.tokenName||''}`, 'warn');
+  };
+
+  const handleRestore = (id) => {
+    const r = records.find(r=>r.id===id);
+    setRecords(prev=>prev.map(r=>r.id===id ? {...r, cancelled:false, cancelReason:'', updatedAt:new Date().toISOString()} : r));
+    addToast(`↩ 已恢复：${r?.tokenName||''}`, 'success');
+  };
+
+  const handleOpen = (id) => { setActiveId(id); setView('checklist'); };
+  const handleBack = () => { setActiveId(null); setView('dashboard'); };
+
+  const TOAST_COLORS = { success:'#059669', warn:'#D97706', info:'#2E75B6', error:'#DC2626' };
+
+  return (
+    <div>
+      {/* Toast notifications */}
+      <div style={{position:'fixed', top:16, right:16, zIndex:9999, display:'flex', flexDirection:'column', gap:8, pointerEvents:'none'}}>
+        {toasts.map(t=>(
+          <div key={t.id} style={{
+            background:'white', border:`1.5px solid ${TOAST_COLORS[t.type]||TOAST_COLORS.info}`,
+            borderLeft:`4px solid ${TOAST_COLORS[t.type]||TOAST_COLORS.info}`,
+            borderRadius:10, padding:'10px 16px', fontSize:13, fontWeight:600,
+            color:'#111827', boxShadow:'0 4px 16px rgba(0,0,0,0.12)',
+            maxWidth:320, animation:'slideIn 0.2s ease',
+          }}>{t.msg}</div>
+        ))}
+      </div>
+      <style>{`@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}`}</style>
+
+      {view==='dashboard' && <Dashboard records={records} onOpen={handleOpen} onNew={()=>setView('new')} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} onViewCompleted={()=>setView('completed')}/>}
+      {view==='new' && <NewListingWizard onSave={handleSave} onCancel={()=>setView('dashboard')} existingRecords={records} onOpenExisting={id=>{ setActiveId(id); setView('checklist'); }}/>}
+      {view==='checklist' && activeRecord && <ChecklistView record={activeRecord} onBack={handleBack} onUpdate={handleUpdate} addToast={addToast}/>}
+      {view==='completed' && <CompletedTable records={records} onBack={()=>setView('dashboard')}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
