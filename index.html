@@ -91,6 +91,8 @@ function buildChecklist(site, product, tokenType, opts={}) {
     add('前置确认','pre','确认 Fireblocks 支持该链','钱包','Huaxi Li','提前确认','HK站必须Fireblocks支持（AML冻结/解冻功能）',true);
     add('前置确认','pre','确认 KYT 工具支持该链','钱包/合规',site==='HK'?'Huaxi Li（Chainalysis）':site==='Global'?'Betty Nie（ScoreChain/Elliptic）':'SumSub','提前确认','查阅《KYT支持表》确认链是否在支持列表内，不支持则不能上该链',true);
   }
+  if (site==='HK' || site==='Global')
+    add('前置确认','pre','确认 Chainalysis 是否支持该币种','合规/钱包',site==='HK'?'Huaxi Li / Betty Nie':'Betty Nie','提前确认','在 Chainalysis 后台确认该币种已被支持并可正常 KYT 监控。不支持则需评估替代方案，不可直接上线',true);
   if (product==='Orderbook'||product==='RFQ')
     add('前置确认','pre','确认 LP / MM 流动性支持','流动性',site==='HK'?'George Qiao / Andre Ki':site==='Global'?'Leo Cheng / Josiah Choong':'Aisha Mi / George Qiao','提前确认','确认做市商能否支持该币对。如不可支持，必须@Freya Yu说明卡点',true);
 
@@ -235,6 +237,27 @@ function buildChecklist(site, product, tokenType, opts={}) {
     add('正式上线','launch','开启充提全量开关','Listing Ops','Rebeca Zhang','配置完成后','充提开关打开后即完成，无需交易对配置',true);
   }
 
+  // 通用：钱包侧完成部署 + 充提验证（所有非仅上链）
+  if (product!=='ChainOnly') {
+    add('执行配置','exec','确认钱包侧完成部署 + 充提验证','钱包','Huaxi Li（在群里通知完成）','等待 Huaxi 通知','Huaxi Li 完成链上部署后会在群里发通知。\n收到通知后执行充提验证：充值测试 → 提现测试 → 确认到账',true);
+  }
+
+  // 通用：Global + ID 通知 MM 更新交易参数表格
+  if ((site==='Global' || site==='ID') && product!=='ChainOnly') {
+    add('执行配置','exec','通知 MM 交易参数并更新至共享表格','Listing Ops','Rebeca Zhang / Freya Yu','上线前','将交易参数更新至 MM 共享 Google Sheets 表格，并通知 MM：\nhttps://docs.google.com/spreadsheets/d/18UVobtX7Cn1Pe3Y9BImPvK4VHLs60nr9rFtN0ExY9Ko/edit?pli=1&gid=1650980545#gid=1650980545',true);
+  }
+
+  // 通用：上线准备（非仅上链）— Rebeca / Freya / Eyang / Teddy
+  if (product!=='ChainOnly') {
+    add('执行配置','exec','通知宣发群上线信息','Listing Ops','Rebeca Zhang / Freya Yu / Eyang / Teddy','上线前1天','在宣发群通知上线时间、币种、交易对、产品类型，附带链接或公告草稿');
+    add('执行配置','exec','通知 Puhui MM 借币','Listing Ops','Rebeca Zhang / Freya Yu','上线前','通知 Puhui 做市商提前安排借币，确保开盘时有足够流动性',true);
+    if (nc) add('执行配置','exec','新链：补充 Gas Fee + 补充水位','Listing Ops / 钱包','Eyang → Huaxi Li','上线前','① 将 Gas Fee 充至链上钱包地址 ② 补充充提水位确保正常运转。新链必做',true);
+    add('执行配置','exec','撰写上线公告','Marketing / Listing Ops','Freya Yu / Rebeca Zhang','上线前1天','公告内容：上线时间、交易对、产品类型、活动（如有）。需经合规审核，不得有误导性声明');
+    add('执行配置','exec','申请宣发 Banner','Marketing','Freya Yu / Teddy','上线前3天','向设计团队提交 Banner 需求（尺寸、品牌规范、内容要点），用于 App / 网站宣传');
+    add('执行配置','exec','开盘前配置白名单','Listing Ops','Rebeca Zhang / Eyang','开盘前','在系统后台配置交易白名单，确保开盘按计划进行',true);
+    add('正式上线','launch','通知 MM 正式挂单','Listing Ops','Rebeca Zhang / Freya Yu','开盘时','开盘后立即通知做市商挂单，确保盘口流动性',true);
+  }
+
   return s;
 }
 
@@ -307,6 +330,7 @@ function ProgressRing({ pct, size=48, stroke=4, color='#2E75B6' }) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onViewCompleted }) {
   const [filter, setFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [editingLaunchId, setEditingLaunchId] = useState(null);
@@ -379,7 +403,16 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
           <div style={{color:'white', fontSize:20, fontWeight:700}}>OSL 上币流程向导</div>
           <div style={{color:'rgba(255,255,255,0.65)', fontSize:13, marginTop:2}}>管理所有进行中的上币任务</div>
         </div>
-        <div style={{display:'flex', gap:8}}>
+        <div style={{display:'flex', gap:8, alignItems:'center'}}>
+          {/* View mode toggle */}
+          <div style={{display:'flex', background:'rgba(255,255,255,0.1)', borderRadius:8, overflow:'hidden'}}>
+            {[{v:'grid',icon:'⊞'},{v:'list',icon:'☰'}].map(({v,icon})=>(
+              <button key={v} onClick={()=>setViewMode(v)} style={{
+                background: viewMode===v ? 'rgba(255,255,255,0.25)' : 'transparent',
+                border:'none', color:'white', padding:'7px 12px', cursor:'pointer', fontSize:15,
+              }}>{icon}</button>
+            ))}
+          </div>
           <button className="btn" onClick={onViewCompleted} style={{background:'rgba(255,255,255,0.15)', color:'white', border:'1px solid rgba(255,255,255,0.3)', borderRadius:10, padding:'10px 16px', fontWeight:600, cursor:'pointer', fontSize:13}}>
             📊 已完成记录
           </button>
@@ -389,7 +422,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
         </div>
       </div>
 
-      <div style={{maxWidth:900, margin:'0 auto', padding:'20px 16px'}}>
+      <div style={{maxWidth: viewMode==='grid'?1400:960, margin:'0 auto', padding:'20px 16px'}}>
         {/* Stats bar */}
         {records.length > 0 && (
           <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20}}>
@@ -422,14 +455,33 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
             <div style={{fontSize:16, fontWeight:600, marginBottom:8}}>还没有上币任务</div>
             <div style={{fontSize:13}}>点击右上角「新建上币任务」开始</div>
           </div>
-        ) : (
-          <div style={{display:'flex', flexDirection:'column', gap:7}}>
-            {sorted.map(r => {
+        ) : viewMode==='grid' ? (
+          // ── 网格模式：三列按站点分组 ──
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, alignItems:'start'}}>
+            {SITES.map(siteObj => {
+              const siteRecords = sorted.filter(r => r.site === siteObj.id);
+              return (
+                <div key={siteObj.id}>
+                  {/* 站点列标题 */}
+                  <div style={{
+                    background: siteObj.color, borderRadius:10, padding:'8px 14px',
+                    marginBottom:8, display:'flex', alignItems:'center', gap:8,
+                  }}>
+                    <span style={{fontSize:18}}>{siteObj.icon}</span>
+                    <span style={{color:'white', fontWeight:800, fontSize:14}}>{siteObj.label}</span>
+                    <span style={{marginLeft:'auto', background:'rgba(255,255,255,0.2)', color:'white', fontSize:12, fontWeight:700, borderRadius:99, padding:'1px 8px'}}>{siteRecords.length}</span>
+                  </div>
+                  {/* 该站点的卡片 */}
+                  <div style={{display:'flex', flexDirection:'column', gap:7}}>
+                    {siteRecords.length === 0 ? (
+                      <div style={{textAlign:'center', padding:'20px 0', color:'#D1D5DB', fontSize:13}}>暂无任务</div>
+                    ) : siteRecords.map(r => {
               const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
               const done = Object.values(r.checked||{}).filter(Boolean).length;
               const pct = checklist.length ? Math.round(done/checklist.length*100) : 0;
               const status = getRecordStatus(r, checklist.length);
               const sm = STATUS_META[status];
+              const isGrid = true;
               const isCancelled = status === 'cancelled';
               const siteInfo = SITES.find(s=>s.id===r.site);
               const prodInfo = PRODUCTS.find(p=>p.id===r.product);
@@ -448,7 +500,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                   opacity: isCancelled ? 0.55 : 1,
                 }} onClick={()=>onOpen(r.id)}>
                   {/* Main row */}
-                  <div style={{display:'flex', alignItems:'center', gap:14, padding:'12px 16px'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:12, padding: isGrid ? '9px 12px' : '12px 16px'}}>
                     <ProgressRing pct={pct} />
                     <div style={{flex:1, minWidth:0}}>
                       {/* Row 1: name + badges */}
@@ -462,6 +514,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                       {/* Row 2: meta + launch time — 全部一行 */}
                       <div style={{display:'flex', gap:8, marginTop:5, alignItems:'center', flexWrap:'wrap'}}>
                         <span style={{fontSize:12, color:'#4B5563'}}>{r.tokenType==='newchain'?'⛓️ 新链':'🪙 子代币'}</span>
+                        {r.expectedMM && <span style={{fontSize:11, color:'#6B7280'}}>MM: {r.expectedMM}</span>}
                         {r.chainOnly && <span style={{fontSize:11, background:'#EDE9FE', color:'#7C3AED', border:'1px solid #DDD6FE', borderRadius:5, padding:'1px 7px', fontWeight:600}}>仅上链</span>}
                         {(r.chainLabels||[]).map((tag,i)=>(
                           <span key={i} style={{fontSize:11, background:'#F3F4F6', color:'#374151', border:'1px solid #E5E7EB', borderRadius:5, padding:'1px 7px', fontWeight:500}}>{tag}</span>
@@ -511,7 +564,113 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                       <span style={{fontSize:12, color:'#6B7280'}}>{r.cancelReason}</span>
                     </div>
                   )}
-                  {/* Pending critical items strip */}
+                  {/* Pending critical items strip — 两种模式都完整展示 */}
+                  {pendingCritical.length>0 && (
+                    <div style={{borderTop:'1px solid #FEE2E2', background:'#FFF7F7', padding:'6px 12px 6px 16px', display:'flex', flexDirection:'column', gap:3}}>
+                      <div style={{fontSize:10, fontWeight:700, color:'#B91C1C', letterSpacing:0.3, marginBottom:1}}>⚠ PENDING 关键项</div>
+                      {pendingCritical.slice(0,4).map((step,i)=>(
+                        <div key={i} style={{display:'flex', alignItems:'baseline', gap:5}}>
+                          <span style={{fontSize:9, color:'#EF4444', flexShrink:0, marginTop:1}}>✕</span>
+                          <span style={{fontSize:11, color:'#111827', fontWeight:600, lineHeight:1.4}}>{step.task}</span>
+                          <span style={{fontSize:10, color:'#9CA3AF', flexShrink:0, whiteSpace:'nowrap'}}>— {step.contact.split('\n')[0].split('（')[0].trim()}</span>
+                        </div>
+                      ))}
+                      {pendingCritical.length>4 && <div style={{fontSize:10, color:'#EF4444', marginTop:1}}>还有 {pendingCritical.length-4} 项...</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          // ── 列表模式：单列 ──
+          <div style={{display:'flex', flexDirection:'column', gap:7}}>
+            {sorted.map(r => {
+              const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
+              const done = Object.values(r.checked||{}).filter(Boolean).length;
+              const pct = checklist.length ? Math.round(done/checklist.length*100) : 0;
+              const status = getRecordStatus(r, checklist.length);
+              const sm = STATUS_META[status];
+              const isGrid = false;
+              const isCancelled = status === 'cancelled';
+              const siteInfo = SITES.find(s=>s.id===r.site);
+              const prodInfo = PRODUCTS.find(p=>p.id===r.product);
+              const siteColor = siteInfo?.color || '#6B7280';
+              const pendingCritical = isCancelled ? [] : checklist
+                .map((step,i)=>({...step,idx:i}))
+                .filter(step=>step.critical && !(r.checked||{})[step.idx]);
+              return (
+                <div key={r.id} className="hover-card" style={{
+                  background: isCancelled ? '#FAFAFA' : 'white', borderRadius:10,
+                  boxShadow:'0 1px 4px rgba(0,0,0,0.06)',
+                  border: pendingCritical.length>0 && !isCancelled ? '1px solid #FECACA' : '1px solid #E5E7EB',
+                  borderLeft:`4px solid ${isCancelled?'#D1D5DB':siteColor}`,
+                  cursor:'pointer', transition:'all 0.15s', overflow:'hidden',
+                  opacity: isCancelled ? 0.55 : 1,
+                }} onClick={()=>onOpen(r.id)}>
+                  <div style={{display:'flex', alignItems:'center', gap:12, padding:'12px 16px'}}>
+                    <ProgressRing pct={pct} />
+                    <div style={{flex:1, minWidth:0}}>
+                      <div style={{display:'flex', alignItems:'center', gap:7, flexWrap:'wrap'}}>
+                        <span style={{fontWeight:800, fontSize:16, color:'#111827'}}>{r.tokenName}</span>
+                        <span style={{background:isCancelled?'#F3F4F6':siteInfo?.bg, color:siteColor, fontSize:11, fontWeight:800, padding:'2px 9px', borderRadius:99, border:`1px solid ${siteColor}40`}}>{siteInfo?.icon} {r.site}</span>
+                        <span style={{background:'#F3F4F6', color:'#374151', fontSize:11, fontWeight:600, padding:'2px 9px', borderRadius:99}}>{prodInfo?.icon} {r.product}{r.stableHub?' +SH':''}{r.launchpool?' +LP':''}</span>
+                        <span style={{background:sm.bg, color:sm.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99}}>{sm.label}</span>
+                        {pendingCritical.length>0 && <span style={{background:'#FEE2E2', color:'#DC2626', fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99}}>⚠ {pendingCritical.length} 关键项</span>}
+                      </div>
+                      <div style={{display:'flex', gap:8, marginTop:5, alignItems:'center', flexWrap:'wrap'}}>
+                        <span style={{fontSize:12, color:'#4B5563'}}>{r.tokenType==='newchain'?'⛓️ 新链':'🪙 子代币'}</span>
+                        {r.expectedMM && <span style={{fontSize:11, color:'#6B7280'}}>MM: {r.expectedMM}</span>}
+                        {r.chainOnly && <span style={{fontSize:11, background:'#EDE9FE', color:'#7C3AED', border:'1px solid #DDD6FE', borderRadius:5, padding:'1px 7px', fontWeight:600}}>仅上链</span>}
+                        {(r.chainLabels||[]).map((tag,i)=>(
+                          <span key={i} style={{fontSize:11, background:'#F3F4F6', color:'#374151', border:'1px solid #E5E7EB', borderRadius:5, padding:'1px 7px', fontWeight:500}}>{tag}</span>
+                        ))}
+                        <span style={{fontSize:12, color:'#9CA3AF'}}>更新 {fmtDate(r.updatedAt)}</span>
+                        {status==='in_progress' && (
+                          <span style={{display:'flex', alignItems:'center', gap:5}} onClick={e=>e.stopPropagation()}>
+                            <span style={{fontSize:12, color:'#374151', fontWeight:600}}>🗓 预期上线：</span>
+                            {editingLaunchId===r.id ? (
+                              <span style={{display:'flex', alignItems:'center', gap:5}}>
+                                <input type="datetime-local" value={launchInputVal} onChange={e=>setLaunchInputVal(e.target.value)} step="3600"
+                                  style={{fontSize:12, border:'1.5px solid #2E75B6', borderRadius:6, padding:'2px 8px', fontFamily:'inherit', outline:'none'}}/>
+                                <button onClick={()=>{
+                                  const iso = launchInputVal ? new Date(launchInputVal).toISOString() : null;
+                                  onUpdate({...r, expectedLaunchTime:iso, updatedAt:new Date().toISOString()});
+                                  setEditingLaunchId(null);
+                                }} style={{background:C.blue, color:'white', border:'none', borderRadius:6, padding:'3px 10px', fontSize:12, cursor:'pointer', fontWeight:700}}>保存</button>
+                                <button onClick={()=>setEditingLaunchId(null)} style={{background:'none', border:'1px solid #E5E7EB', borderRadius:6, padding:'3px 8px', fontSize:12, cursor:'pointer', color:'#6B7280'}}>取消</button>
+                              </span>
+                            ) : (
+                              <span onClick={()=>{setEditingLaunchId(r.id); setLaunchInputVal(toInputVal(r.expectedLaunchTime));}}
+                                style={{fontSize:12, color:r.expectedLaunchTime?'#D97706':'#9CA3AF', fontWeight:r.expectedLaunchTime?700:400, cursor:'pointer', borderBottom:'1px dashed currentColor', paddingBottom:1}}>
+                                {fmtLaunchTime(r.expectedLaunchTime) || '点击设置'}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{display:'flex', alignItems:'center', gap:8, marginTop:6}}>
+                        <div style={{flex:1, background:'#E5E7EB', borderRadius:99, height:5, overflow:'hidden', maxWidth:260}}>
+                          <div style={{width:`${pct}%`, height:'100%', background:pct===100?'#059669':isCancelled?'#D1D5DB':siteColor, borderRadius:99, transition:'width 0.3s'}}/>
+                        </div>
+                        <span style={{fontSize:11, color:'#9CA3AF', whiteSpace:'nowrap'}}>{done}/{checklist.length} 步骤</span>
+                      </div>
+                    </div>
+                    {isCancelled
+                      ? <button className="btn" onClick={e=>{e.stopPropagation();onRestore(r.id);}} style={{background:'none', border:'1px solid #D1FAE5', color:'#059669', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0}}>↩ 恢复</button>
+                      : <button className="btn" onClick={e=>openCancelModal(e,r.id)} style={{background:'none', border:'1px solid #E5E7EB', color:'#9CA3AF', borderRadius:8, width:30, height:30, cursor:'pointer', fontSize:14, flexShrink:0}} title="取消">✕</button>
+                    }
+                  </div>
+                  {isCancelled && r.cancelReason && (
+                    <div style={{borderTop:'1px solid #F3F4F6', background:'#FAFAFA', padding:'6px 16px 6px 20px', display:'flex', gap:8, alignItems:'center'}}>
+                      <span style={{fontSize:11, fontWeight:700, color:'#9CA3AF', flexShrink:0}}>取消原因</span>
+                      <span style={{fontSize:12, color:'#6B7280'}}>{r.cancelReason}</span>
+                    </div>
+                  )}
                   {pendingCritical.length>0 && (
                     <div style={{borderTop:'1px solid #FEE2E2', background:'#FFF7F7', padding:'7px 16px 7px 20px', display:'flex', flexDirection:'column', gap:4}}>
                       <div style={{fontSize:11, fontWeight:700, color:'#B91C1C', letterSpacing:0.3}}>PENDING 关键项</div>
@@ -524,7 +683,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                           <span style={{fontSize:11, color:'#9CA3AF', flexShrink:0}}>— {step.contact.split('\n')[0]}</span>
                         </div>
                       ))}
-                      {pendingCritical.length>3 && <div style={{fontSize:11, color:'#EF4444'}}>还有 {pendingCritical.length-3} 项关键步骤待处理...</div>}
+                      {pendingCritical.length>3 && <div style={{fontSize:11, color:'#EF4444'}}>还有 {pendingCritical.length-3} 项...</div>}
                     </div>
                   )}
                 </div>
@@ -540,7 +699,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
 // ─── New Listing Wizard ───────────────────────────────────────────────────────
 function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting }) {
   const [site, setSite] = useState(null);
-  const [product, setProduct] = useState(null);
+  const [products, setProducts] = useState([]); // multi-select
   const [tokenType, setTokenType] = useState(null);
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [quoteCurrencies, setQuoteCurrencies] = useState([]); // selected quote currencies
@@ -548,8 +707,10 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
   const [chains, setChains] = useState([]);
   const [customChain, setCustomChain] = useState('');
   const [userType, setUserType] = useState('');
+  const [expectedMM, setExpectedMM] = useState('');
+  const [wizardLaunchTime, setWizardLaunchTime] = useState('');
   const [stableHub, setStableHub] = useState(null);
-  const [launchpool, setLaunchpool] = useState(null); // null=未选, true/false — ID站专属
+  const [launchpool, setLaunchpool] = useState(null);
   const [dupWarning, setDupWarning] = useState(null);
 
   const QUOTE_OPTIONS = ['USD','USDT','USDC','BTC','HKD','IDR'];
@@ -568,9 +729,13 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
     setChainOnly(v => { if (!v) setQuoteCurrencies([]); return !v; });
   };
 
-  const needsStableHub  = site==='Global' && product==='RFQ';
-  const needsLaunchpool = site==='ID';
-  const canCreate = site && product && tokenType && tokenSymbol.trim()
+  const toggleProduct = (id) => {
+    setProducts(prev => prev.includes(id) ? prev.filter(p=>p!==id) : [...prev, id]);
+    if (id==='RFQ' && products.includes('RFQ')) setStableHub(null); // deselecting RFQ clears StableHub
+  };
+  const needsStableHub  = site==='Global' && products.includes('RFQ');
+  const needsLaunchpool = site==='ID' && products.length > 0;
+  const canCreate = site && products.length > 0 && tokenType && tokenSymbol.trim()
     && (!needsStableHub  || stableHub  !== null)
     && (!needsLaunchpool || launchpool !== null);
 
@@ -592,36 +757,44 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
   };
 
   const doCreate = () => {
-    const sh = needsStableHub  ? !!stableHub  : false;
     const lp = needsLaunchpool ? !!launchpool : false;
     const chainLabels = chains.map(id => {
       const c = CHAINS.find(c=>c.id===id);
       return c ? c.tag : id.replace('CUSTOM_','');
     });
-    const record = {
-      id: genId(),
-      tokenName: derivedName(),
-      tokenSymbol: tokenSymbol.trim(),
-      quoteCurrencies, chainOnly,
-      chains, chainLabels,
-      userType,
-      site, product, tokenType, stableHub: sh, launchpool: lp,
-      checked: {}, notes: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      estimatedTime: estimateTime(site, product, tokenType),
-    };
-    onSave(record);
+    const launchIso = wizardLaunchTime ? new Date(wizardLaunchTime).toISOString() : null;
+    const newRecords = products.map(prod => {
+      const sh = (site==='Global' && prod==='RFQ') ? !!stableHub : false;
+      return {
+        id: genId(),
+        tokenName: derivedName(),
+        tokenSymbol: tokenSymbol.trim(),
+        quoteCurrencies, chainOnly,
+        chains, chainLabels,
+        userType, expectedMM,
+        expectedLaunchTime: launchIso,
+        site, product: prod, tokenType, stableHub: sh, launchpool: lp,
+        checked: {}, notes: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        estimatedTime: estimateTime(site, prod, tokenType),
+      };
+    });
+    onSave(newRecords);
   };
 
   const handleCreate = () => {
     if (!canCreate) return;
     const sym = tokenSymbol.trim().toLowerCase();
-    const matches = (existingRecords || []).filter(r =>
-      (r.tokenSymbol||r.tokenName).trim().toLowerCase() === sym &&
-      r.site === site && r.product === product
-    );
-    if (matches.length > 0) setDupWarning({ matches });
+    const allMatches = [];
+    products.forEach(prod => {
+      const m = (existingRecords || []).filter(r =>
+        (r.tokenSymbol||r.tokenName).trim().toLowerCase() === sym &&
+        r.site === site && r.product === prod
+      );
+      allMatches.push(...m);
+    });
+    if (allMatches.length > 0) setDupWarning({ matches: allMatches });
     else doCreate();
   };
 
@@ -803,7 +976,7 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
           <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:12}}>上线站点</div>
           <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10}}>
             {SITES.map(s=>(
-              <button key={s.id} onClick={()=>{setSite(s.id);setProduct(null);setStableHub(null);setLaunchpool(null);}}
+              <button key={s.id} onClick={()=>{setSite(s.id);setProducts([]);setStableHub(null);setLaunchpool(null);}}
                 style={{border:`2px solid ${site===s.id?s.color:'#E5E7EB'}`, borderRadius:12, padding:'14px 10px', cursor:'pointer', background:site===s.id?s.bg:'white', textAlign:'left'}}>
                 <div style={{fontSize:20, marginBottom:5}}>{s.icon}</div>
                 <div style={{fontWeight:700, fontSize:13, color:site===s.id?s.color:'#374151'}}>{s.label}</div>
@@ -817,21 +990,26 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
         {site && (
           <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
             <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:12}}>产品类型</div>
-            <div style={{display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10}}>
-              {PRODUCTS.filter(p=>!(p.id==='Perp'&&site!=='Global')).map(p=>(
-                <button key={p.id} onClick={()=>{setProduct(p.id);setStableHub(null);}}
-                  style={{border:`2px solid ${product===p.id?'#2E75B6':'#E5E7EB'}`, borderRadius:12, padding:'14px 16px', cursor:'pointer', background:product===p.id?'#EBF4FB':'white', textAlign:'left'}}>
+            <div style={{fontSize:12, color:'#9CA3AF', marginBottom:8}}>可多选</div>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10}}>
+              {PRODUCTS.filter(p=>!(p.id==='Perp'&&site!=='Global')).map(p=>{
+                const sel = products.includes(p.id);
+                return (
+                <button key={p.id} onClick={()=>toggleProduct(p.id)}
+                  style={{border:`2px solid ${sel?'#2E75B6':'#E5E7EB'}`, borderRadius:12, padding:'14px 16px', cursor:'pointer', background:sel?'#EBF4FB':'white', textAlign:'left', position:'relative'}}>
+                  {sel && <span style={{position:'absolute', top:8, right:10, fontSize:13, color:'#2E75B6', fontWeight:900}}>✓</span>}
                   <div style={{fontSize:20, marginBottom:5}}>{p.icon}</div>
-                  <div style={{fontWeight:700, fontSize:13, color:product===p.id?C.navy:'#374151'}}>{p.label}</div>
+                  <div style={{fontWeight:700, fontSize:13, color:sel?C.navy:'#374151'}}>{p.label}</div>
                   <div style={{fontSize:11, color:'#6B7280', marginTop:3}}>{p.note}</div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Token type */}
-        {site && product && (
+        {site && products.length > 0 && (
           <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
             <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:12}}>代币类型</div>
             <div style={{display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10}}>
@@ -904,7 +1082,7 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
         )}
 
         {/* 用户类型（可选） */}
-        {site && product && tokenType && (
+        {site && products.length > 0 && tokenType && (
           <div style={{background:'white', borderRadius:16, padding:20, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
             <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:10}}>用户类型 <span style={{fontSize:12, fontWeight:400, color:'#9CA3AF'}}>（可选）</span></div>
             <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
@@ -921,20 +1099,40 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
           </div>
         )}
 
+        {/* MM + 期望上线时间 */}
+        {site && products.length > 0 && tokenType && (
+          <div style={{background:'white', borderRadius:16, padding:20, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16}}>
+            <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:14}}>其他信息 <span style={{fontSize:12, fontWeight:400, color:'#9CA3AF'}}>（可选）</span></div>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:6}}>做市商（MM）</div>
+              <input value={expectedMM} onChange={e=>setExpectedMM(e.target.value)}
+                placeholder="例如：Wintermute、GSR、Kbit…"
+                style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:9, padding:'9px 12px', fontSize:14, fontFamily:'inherit', outline:'none'}}/>
+            </div>
+            <div>
+              <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:6}}>期望上线时间</div>
+              <input type="datetime-local" value={wizardLaunchTime} onChange={e=>setWizardLaunchTime(e.target.value)} step="3600"
+                style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:9, padding:'9px 12px', fontSize:14, fontFamily:'inherit', outline:'none'}}/>
+            </div>
+          </div>
+        )}
+
         {/* Create button */}
         {canCreate && (
           <div style={{textAlign:'center'}}>
             <div style={{fontSize:13, color:'#6B7280', marginBottom:12}}>
               <strong style={{color:'#111827'}}>{derivedName()}</strong>
               {chains.length>0 && <span style={{marginLeft:8, color:'#0369A1'}}>{chains.map(id=>{const c=CHAINS.find(c=>c.id===id);return c?c.tag:id.replace('CUSTOM_','');}).join(' / ')}</span>}
-              &nbsp;·&nbsp;{sInfo?.icon} {sInfo?.label} · {PRODUCTS.find(p=>p.id===product)?.icon} {PRODUCTS.find(p=>p.id===product)?.label} · {tokenType==='newchain'?'⛓️ 新链':'🪙 子代币'}
-              &nbsp;·&nbsp;预计 <strong>{estimateTime(site, product, tokenType)}</strong>
+              &nbsp;·&nbsp;{sInfo?.icon} {sInfo?.label}
+              &nbsp;·&nbsp;{products.map(pid=>PRODUCTS.find(p=>p.id===pid)?.icon+' '+pid).join(' + ')}
+              &nbsp;·&nbsp;{tokenType==='newchain'?'⛓️ 新链':'🪙 子代币'}
+              {wizardLaunchTime && <span style={{marginLeft:8}}>· 🗓 {fmtLaunchTime(new Date(wizardLaunchTime).toISOString())}</span>}
             </div>
             <button className="btn" onClick={handleCreate} style={{
               background:C.navy, color:'white', border:'none', borderRadius:12,
               padding:'14px 40px', fontSize:16, fontWeight:700, cursor:'pointer',
               boxShadow:'0 4px 12px rgba(27,58,107,0.3)',
-            }}>创建并进入 CheckList →</button>
+            }}>创建 {products.length > 1 ? `${products.length} 条任务` : '并进入 CheckList'} →</button>
           </div>
         )}
       </div>
@@ -1268,11 +1466,17 @@ function App() {
 
   const activeRecord = records.find(r=>r.id===activeId);
 
-  const handleSave = (record) => {
-    setRecords(prev=>[...prev, record]);
-    setActiveId(record.id);
-    setView('checklist');
-    addToast(`🆕 已创建任务：${record.tokenName}`, 'success');
+  const handleSave = (recordOrArr) => {
+    const arr = Array.isArray(recordOrArr) ? recordOrArr : [recordOrArr];
+    setRecords(prev=>[...prev, ...arr]);
+    if (arr.length === 1) {
+      setActiveId(arr[0].id);
+      setView('checklist');
+      addToast(`🆕 已创建任务：${arr[0].tokenName}`, 'success');
+    } else {
+      setView('dashboard');
+      addToast(`🆕 已创建 ${arr.length} 条任务：${arr.map(r=>r.product).join(' + ')}`, 'success');
+    }
   };
 
   const handleUpdate = (updated, toastMsg='') => {
