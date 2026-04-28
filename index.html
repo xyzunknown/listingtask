@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; }
@@ -23,7 +24,10 @@
 <script type="text/babel">
 
 const { useState, useMemo, useEffect, useCallback } = React;
-const STORAGE_KEY = 'osl_listing_records_v2';
+// ─── Supabase ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://achymuwhipqdcplarzhr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_gUjQv0IDT3RD-5WsN8mE2Q_pLeoorPU';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = { navy:'#1B3A6B', blue:'#2E75B6', teal:'#1A7A6E', purple:'#6A3D8F', orange:'#C55A11', green:'#059669', red:'#DC2626', gray:'#6B7280' };
@@ -40,6 +44,7 @@ const PRODUCTS = [
   { id:'OTC',       label:'OTC',            icon:'🤝', note:'最快，无需底仓配资' },
   { id:'Perp',      label:'Perp 合约',      icon:'📈', note:'仅Global，需风险限额' },
   { id:'ChainOnly', label:'仅上链',          icon:'⛓️', note:'只配置钱包，无交易对，充提即完成' },
+  { id:'WealthToken', label:'理财代币',       icon:'💰', note:'仅HK，仅上链不开充提，填参数即可' },
 ];
 const TOKEN_TYPES = [
   { id:'subtoken',  label:'子代币', icon:'🪙', note:'已支持链上的新代币（如ERC-20）' },
@@ -237,20 +242,27 @@ function buildChecklist(site, product, tokenType, opts={}) {
     add('正式上线','launch','开启充提全量开关','Listing Ops','Rebeca Zhang','配置完成后','充提开关打开后即完成，无需交易对配置',true);
   }
 
-  // 通用：钱包侧完成部署 + 充提验证（所有非仅上链）
-  if (product!=='ChainOnly') {
+  // EXECUTION — 理财代币（HK专属）
+  if (product==='WealthToken') {
+    add('执行配置','exec','收集并填写上币参数','Listing Ops','Freya Yu / Eyang / Teddy','上线前','收集香港站标准上币所需参数（代币信息、合规文件、风险参数等），由 Freya 团队、Eyang 和 Teddy 共同提供',true);
+    add('执行配置','exec','将参数更新到 Lark Sheet','Listing Ops','Freya Yu / Eyang / Teddy','提交当天','将所有参数填写并更新到对应 Lark Sheet 表格：\nhttps://osl-global.sg.larksuite.com/wiki/Z9C8wV2LRiRcslksYQ4lBFoSgnh?sheet=3z0AVW',true);
+    add('正式上线','launch','确认参数已提交完成','Listing Ops','Freya Yu','提交后','确认 Lark Sheet 中所有参数已填写完整，无遗漏。\n⚠ 理财代币不开充提，不配置后台币对，仅上链参数提交即完成',true);
+  }
+
+  // 通用：钱包侧完成部署 + 充提验证（所有非仅上链、非理财代币）
+  if (product!=='ChainOnly' && product!=='WealthToken') {
     add('执行配置','exec','确认钱包侧完成部署 + 充提验证','钱包','Huaxi Li（在群里通知完成）','等待 Huaxi 通知','Huaxi Li 完成链上部署后会在群里发通知。\n收到通知后执行充提验证：充值测试 → 提现测试 → 确认到账',true);
   }
 
-  // 通用：Global + ID 通知 MM 更新交易参数表格
-  if ((site==='Global' || site==='ID') && product!=='ChainOnly') {
+  // 通用：Global + ID 通知 MM 更新交易参数表格（仅 Orderbook）
+  if ((site==='Global' || site==='ID') && product==='Orderbook') {
     add('执行配置','exec','通知 MM 交易参数并更新至共享表格','Listing Ops','Rebeca Zhang / Freya Yu','上线前','将交易参数更新至 MM 共享 Google Sheets 表格，并通知 MM：\nhttps://docs.google.com/spreadsheets/d/18UVobtX7Cn1Pe3Y9BImPvK4VHLs60nr9rFtN0ExY9Ko/edit?pli=1&gid=1650980545#gid=1650980545',true);
   }
 
   // 通用：上线准备（非仅上链）— Rebeca / Freya / Eyang / Teddy
-  if (product!=='ChainOnly') {
+  if (product!=='ChainOnly' && product!=='WealthToken') {
     add('执行配置','exec','通知宣发群上线信息','Listing Ops','Rebeca Zhang / Freya Yu / Eyang / Teddy','上线前1天','在宣发群通知上线时间、币种、交易对、产品类型，附带链接或公告草稿');
-    add('执行配置','exec','通知 Puhui MM 借币','Listing Ops','Rebeca Zhang / Freya Yu','上线前','通知 Puhui 做市商提前安排借币，确保开盘时有足够流动性',true);
+    if (product==='Orderbook') add('执行配置','exec','通知 Puhui MM 借币','Listing Ops','Rebeca Zhang / Freya Yu','上线前','通知 Puhui 做市商提前安排借币，确保开盘时有足够流动性',true);
     if (nc) add('执行配置','exec','新链：补充 Gas Fee + 补充水位','Listing Ops / 钱包','Eyang → Huaxi Li','上线前','① 将 Gas Fee 充至链上钱包地址 ② 补充充提水位确保正常运转。新链必做',true);
     add('执行配置','exec','撰写上线公告','Marketing / Listing Ops','Freya Yu / Rebeca Zhang','上线前1天','公告内容：上线时间、交易对、产品类型、活动（如有）。需经合规审核，不得有误导性声明');
     add('执行配置','exec','申请宣发 Banner','Marketing','Freya Yu / Teddy','上线前3天','向设计团队提交 Banner 需求（尺寸、品牌规范、内容要点），用于 App / 网站宣传');
@@ -271,16 +283,21 @@ function estimateTime(site, product, tokenType) {
   if (site==='Global' && product==='Orderbook') return nc?'约3–4周':'约1–2周';
   if (site==='Global' && product==='Perp') return nc?'约3–4周':'约1–2周';
   if (site==='ID') return nc?'约2–3周':'约1周';
-  if (product==='ChainOnly') return nc?'约1–2周':'约2–3天';
+  if (product==='ChainOnly')    return nc?'约1–2周':'约2–3天';
+  if (product==='WealthToken')  return '约1周';
   return '—';
 }
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
-function loadRecords() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); } catch { return []; }
+async function loadRecordsFromDB() {
+  const { data, error } = await db.from('listing_records').select('data');
+  if (error) { console.error('Load error:', error); return []; }
+  return (data || []).map(row => row.data);
 }
-function saveRecords(records) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+async function syncRecord(record) {
+  const { error } = await db.from('listing_records')
+    .upsert({ id: record.id, data: record, updated_at: new Date().toISOString() });
+  if (error) console.error('Sync error:', error);
 }
 function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function computeStatus(checked, total) {
@@ -992,7 +1009,7 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
             <div style={{fontSize:14, fontWeight:700, color:'#374151', marginBottom:12}}>产品类型</div>
             <div style={{fontSize:12, color:'#9CA3AF', marginBottom:8}}>可多选</div>
           <div style={{display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10}}>
-              {PRODUCTS.filter(p=>!(p.id==='Perp'&&site!=='Global')).map(p=>{
+              {PRODUCTS.filter(p=>!(p.id==='Perp'&&site!=='Global') && !(p.id==='WealthToken'&&site!=='HK')).map(p=>{
                 const sel = products.includes(p.id);
                 return (
                 <button key={p.id} onClick={()=>toggleProduct(p.id)}
@@ -1451,12 +1468,29 @@ function CompletedTable({ records, onBack }) {
 
 // ─── App shell ────────────────────────────────────────────────────────────────
 function App() {
-  const [records, setRecords] = useState(()=>loadRecords());
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState('dashboard');
   const [activeId, setActiveId] = useState(null);
   const [toasts, setToasts] = useState([]);
 
-  useEffect(()=>{ saveRecords(records); }, [records]);
+  // 初始加载 + 实时同步
+  useEffect(() => {
+    loadRecordsFromDB().then(data => { setRecords(data); setLoading(false); });
+    const channel = db.channel('listing-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'listing_records' }, payload => {
+        if (payload.eventType === 'DELETE') {
+          setRecords(prev => prev.filter(r => r.id !== payload.old.id));
+        } else {
+          const incoming = payload.new.data;
+          setRecords(prev => {
+            const exists = prev.find(r => r.id === incoming.id);
+            return exists ? prev.map(r => r.id === incoming.id ? incoming : r) : [...prev, incoming];
+          });
+        }
+      }).subscribe();
+    return () => db.removeChannel(channel);
+  }, []);
 
   const addToast = (msg, type='info') => {
     const id = Date.now() + Math.random();
@@ -1468,6 +1502,7 @@ function App() {
 
   const handleSave = (recordOrArr) => {
     const arr = Array.isArray(recordOrArr) ? recordOrArr : [recordOrArr];
+    arr.forEach(r => syncRecord(r));
     setRecords(prev=>[...prev, ...arr]);
     if (arr.length === 1) {
       setActiveId(arr[0].id);
@@ -1481,23 +1516,36 @@ function App() {
 
   const handleUpdate = (updated, toastMsg='') => {
     setRecords(prev=>prev.map(r=>r.id===updated.id?updated:r));
+    syncRecord(updated);
     if (toastMsg) addToast(toastMsg);
   };
 
   const handleDelete = (id, reason='') => {
     const r = records.find(r=>r.id===id);
-    setRecords(prev=>prev.map(r=>r.id===id ? {...r, cancelled:true, cancelReason:reason, updatedAt:new Date().toISOString()} : r));
+    const updated = {...r, cancelled:true, cancelReason:reason, updatedAt:new Date().toISOString()};
+    setRecords(prev=>prev.map(r=>r.id===id ? updated : r));
+    syncRecord(updated);
     addToast(`⏸ 已取消：${r?.tokenName||''}`, 'warn');
   };
 
   const handleRestore = (id) => {
     const r = records.find(r=>r.id===id);
-    setRecords(prev=>prev.map(r=>r.id===id ? {...r, cancelled:false, cancelReason:'', updatedAt:new Date().toISOString()} : r));
+    const updated = {...r, cancelled:false, cancelReason:'', updatedAt:new Date().toISOString()};
+    setRecords(prev=>prev.map(r=>r.id===id ? updated : r));
+    syncRecord(updated);
     addToast(`↩ 已恢复：${r?.tokenName||''}`, 'success');
   };
 
   const handleOpen = (id) => { setActiveId(id); setView('checklist'); };
   const handleBack = () => { setActiveId(null); setView('dashboard'); };
+
+  if (loading) return (
+    <div style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100vh', gap:16, color:'#6B7280'}}>
+      <div style={{fontSize:36}}>⏳</div>
+      <div style={{fontSize:16, fontWeight:600}}>正在加载数据...</div>
+      <div style={{fontSize:13}}>连接到 Supabase 云端数据库</div>
+    </div>
+  );
 
   const TOAST_COLORS = { success:'#059669', warn:'#D97706', info:'#2E75B6', error:'#DC2626' };
 
