@@ -141,6 +141,7 @@ function buildChecklist(site, product, tokenType, opts={}) {
   // EXECUTION — HK RFQ
   if (product==='RFQ' && site==='HK') {
     add('执行配置','exec','发起 Lark 上币审批流','Listing Ops','Freya Yu / Rebeca Zhang','发起时','附上：资产名称、站点(HK)、产品(RFQ)、预期上线时间、预期币对。转发到上币核心排期群');
+    add('执行配置','exec','在 INS 支持群发起 Requirement','Listing Ops','Rebeca Zhang / Freya Yu / Eyang','审批通过后尽早发','在【香港&SG站上币INS支持 / HK&SG Site Supports INS Listings】群里发起需求，@Jim Ball @Prakash Konagi，告知他们开始配置。\n\n话术参考：\nHi Jim & Prakash, we are launching [XXX/USD] RFQ on HK site. Could you please start the INS configuration? Expected launch date: [日期]. Thanks!',true);
     add('执行配置','exec','流动性审核（审批节点1）','HK Trader','Andre Ki','1天','评估LP支持、底仓是否可借。可支持→写出LP名称+额度；不可支持→写清楚卡点并@Freya Yu',true);
     add('执行配置','exec','钱包排期（审批节点2）','钱包','Huaxi Li','1天','确认钱包配置排期');
     add('执行配置','exec','交易对排期（审批节点3）','产品','Irene Li / Harry Tian / Ziyao Xu','1天','RFQ由Irene Li + Harry Tian + Ziyao Xu均Approve后完成');
@@ -261,6 +262,7 @@ function buildChecklist(site, product, tokenType, opts={}) {
 
   // 通用：上线准备（非仅上链）— Rebeca / Freya / Eyang / Teddy
   if (product!=='ChainOnly' && product!=='WealthToken') {
+    add('执行配置','exec','通知 MM 交易参数（价格精度 / 数量精度）并更新对外表格','Listing Ops','Rebeca Zhang / Freya Yu / Eyang','上线前','将每个交易对的价格精度（Price Precision）和数量精度（Quantity Precision）通知 MM，并更新到对外共享表格：\nhttps://docs.google.com/spreadsheets/d/18UVobtX7Cn1Pe3Y9BImPvK4VHLs60nr9rFtN0ExY9Ko/edit?pli=1&gid=0#gid=0',true);
     add('执行配置','exec','通知宣发群上线信息','Listing Ops','Rebeca Zhang / Freya Yu / Eyang / Teddy','上线前1天','在宣发群通知上线时间、币种、交易对、产品类型，附带链接或公告草稿');
     if (product==='Orderbook') add('执行配置','exec','通知 Puhui MM 借币','Listing Ops','Rebeca Zhang / Freya Yu','上线前','通知 Puhui 做市商提前安排借币，确保开盘时有足够流动性',true);
     if (nc) add('执行配置','exec','新链：补充 Gas Fee + 补充水位','Listing Ops / 钱包','Eyang → Huaxi Li','上线前','① 将 Gas Fee 充至链上钱包地址 ② 补充充提水位确保正常运转。新链必做',true);
@@ -345,13 +347,18 @@ function ProgressRing({ pct, size=48, stroke=4, color='#2E75B6' }) {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onViewCompleted }) {
+function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onViewCompleted, onImport }) {
   const [filter, setFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list' | 'table'
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [editingLaunchId, setEditingLaunchId] = useState(null);
   const [launchInputVal, setLaunchInputVal] = useState('');
+  const [editingBlockerId, setEditingBlockerId] = useState(null);
+  const [blockerInputVal, setBlockerInputVal] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importPreview, setImportPreview] = useState(null); // {newRecords, skipCount}
+  const [importFile, setImportFile] = useState(null);
 
   const openCancelModal = (e, id) => {
     e.stopPropagation();
@@ -363,6 +370,96 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
     onDelete(cancelTarget, cancelReason.trim());
     setCancelTarget(null);
     setCancelReason('');
+  };
+
+  const handleImportFile = (file) => {
+    if (!file) return;
+    setImportFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+        const SITE_MAP = {'OSL HK':'HK','HK':'HK','Global':'Global','OSL Global':'Global','OSL ID':'ID','OSL ID ':'ID','ID':'ID'};
+        const PRODUCT_MAP = {'OTC':'OTC','Orderbook':'Orderbook','RFQ':'RFQ','仅上链':'ChainOnly','理财代币':'WealthToken'};
+        const IGNORE_PRODUCTS = ['StableHub','Launchpool'];
+        const newRecords = [];
+        rows.forEach(row => {
+          const ticker = (row['Token Ticker']||row['Token']||'').toString().trim();
+          if (!ticker) return;
+          const siteRaw = (row['站点']||row['Site']||'').toString().trim();
+          const productRaw = (row['交易类型']||row['Product']||'').toString().trim();
+          // Parse sites (may be comma-separated)
+          const siteParts = siteRaw.split(',').map(s=>s.trim()).filter(Boolean);
+          const sites = siteParts.map(s=>SITE_MAP[s]).filter(Boolean);
+          if (sites.length === 0) sites.push('HK'); // default
+          // Parse products (may be comma-separated), filter out ignored ones
+          const productParts = productRaw.split(',').map(s=>s.trim()).filter(Boolean);
+          const stableHub = productParts.some(p=>p==='StableHub');
+          const launchpool = productParts.some(p=>p==='Launchpool');
+          const products = productParts.filter(p=>!IGNORE_PRODUCTS.includes(p)).map(p=>PRODUCT_MAP[p]).filter(Boolean);
+          if (products.length === 0) products.push('OTC'); // default
+          // Parse chain labels
+          const chainRaw = (row['区块链']||row['Chain']||'').toString().trim();
+          const chainLabels = chainRaw ? chainRaw.split('/').map(s=>s.trim()).filter(Boolean) : [];
+          // Parse quote currencies
+          const quoteRaw = (row['交易对名称']||row['交易对']||'').toString().trim();
+          const quoteCurrencies = quoteRaw ? quoteRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+          // Parse launch time
+          let expectedLaunchTime = null;
+          const ltRaw = row['预计上线时间']||row['Expected Launch Time']||'';
+          if (ltRaw instanceof Date) {
+            expectedLaunchTime = ltRaw.toISOString();
+          } else if (typeof ltRaw === 'number' && ltRaw > 0) {
+            const d = XLSX.SSF.parse_date_code(ltRaw);
+            if (d) expectedLaunchTime = new Date(d.y,d.m-1,d.d,d.H||0,d.M||0).toISOString();
+          } else if (typeof ltRaw === 'string' && ltRaw.trim()) {
+            const parsed = new Date(ltRaw.trim());
+            if (!isNaN(parsed)) expectedLaunchTime = parsed.toISOString();
+          }
+          const userType = (row['用户类型']||row['User Type']||'').toString().trim();
+          const expectedMM = (row['做市商']||row['MM']||'').toString().trim();
+          const tokenSymbol = ticker.toUpperCase();
+          const tokenName = quoteCurrencies.length > 0 ? quoteCurrencies.map(q=>`${tokenSymbol}/${q}`).join(', ') : tokenSymbol;
+          sites.forEach(site => {
+            products.forEach(product => {
+              newRecords.push({
+                _key: tokenSymbol+'|'+site+'|'+product,
+                id: genId(),
+                tokenName, tokenSymbol, quoteCurrencies,
+                chainLabels, chainOnly: product==='ChainOnly',
+                chains: [], userType, expectedMM, expectedLaunchTime,
+                site, product, tokenType:'subtoken',
+                stableHub: site==='Global' && product==='RFQ' ? stableHub : false,
+                launchpool: site==='ID' ? launchpool : false,
+                blocker: '', checked: {}, notes: '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                estimatedTime: estimateTime(site, product, 'subtoken'),
+              });
+            });
+          });
+        });
+        // Deduplicate against existing records
+        const existingKeys = new Set(records.map(r=>(r.tokenSymbol||r.tokenName).toUpperCase()+'|'+r.site+'|'+r.product));
+        const toImport = newRecords.filter(r=>!existingKeys.has(r._key));
+        const skipCount = newRecords.length - toImport.length;
+        setImportPreview({newRecords: toImport.map(r=>{const {_key,...rest}=r;return rest;}), skipCount});
+      } catch(err) {
+        console.error('Import error:', err);
+        alert('解析文件失败：'+err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const confirmImport = () => {
+    if (!importPreview || !importPreview.newRecords.length) return;
+    onImport(importPreview.newRecords);
+    setShowImportModal(false);
+    setImportPreview(null);
+    setImportFile(null);
   };
 
   const filtered = records.filter(r => {
@@ -391,6 +488,39 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
 
   return (
     <div>
+      {/* Import modal */}
+      {showImportModal && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
+          <div style={{background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:480, boxShadow:'0 8px 40px rgba(0,0,0,0.18)'}}>
+            <div style={{fontWeight:800, fontSize:17, color:'#111827', marginBottom:6}}>📥 导入 XLSX</div>
+            <div style={{fontSize:13, color:'#6B7280', marginBottom:18}}>选择包含上币记录的 Excel 文件，系统将自动解析并创建任务。</div>
+            <input type="file" accept=".xlsx,.xls" onChange={e=>handleImportFile(e.target.files[0])}
+              style={{display:'block', marginBottom:16, fontSize:13, fontFamily:'inherit'}}/>
+            {importPreview && (
+              <div style={{background: importPreview.newRecords.length>0?'#F0FDF4':'#FEF3C7', border:`1px solid ${importPreview.newRecords.length>0?'#86EFAC':'#FDE68A'}`, borderRadius:10, padding:'12px 16px', marginBottom:16, fontSize:13}}>
+                <div style={{fontWeight:700, color:'#111827', marginBottom:4}}>
+                  将导入 <span style={{color:'#059669'}}>{importPreview.newRecords.length}</span> 条新记录，跳过 <span style={{color:'#D97706'}}>{importPreview.skipCount}</span> 条重复记录
+                </div>
+                {importPreview.newRecords.length > 0 && (
+                  <div style={{marginTop:8, maxHeight:160, overflowY:'auto', display:'flex', flexDirection:'column', gap:4}}>
+                    {importPreview.newRecords.slice(0,8).map((r,i)=>(
+                      <div key={i} style={{fontSize:12, color:'#374151'}}>
+                        {SITES.find(s=>s.id===r.site)?.icon} <strong>{r.tokenSymbol}</strong> · {r.site} · {r.product}
+                        {r.expectedLaunchTime && <span style={{color:'#D97706', marginLeft:6}}>🗓 {fmtLaunchTime(r.expectedLaunchTime)}</span>}
+                      </div>
+                    ))}
+                    {importPreview.newRecords.length > 8 && <div style={{fontSize:12, color:'#9CA3AF'}}>还有 {importPreview.newRecords.length-8} 条...</div>}
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
+              <button onClick={()=>{setShowImportModal(false);setImportPreview(null);setImportFile(null);}} style={{border:'1px solid #E5E7EB', background:'white', borderRadius:9, padding:'9px 18px', fontSize:13, cursor:'pointer', color:'#6B7280', fontWeight:600}}>取消</button>
+              <button onClick={confirmImport} disabled={!importPreview||!importPreview.newRecords.length} style={{border:'none', background:(importPreview&&importPreview.newRecords.length)?'#2E75B6':'#F3F4F6', color:(importPreview&&importPreview.newRecords.length)?'white':'#9CA3AF', borderRadius:9, padding:'9px 20px', fontSize:13, cursor:(importPreview&&importPreview.newRecords.length)?'pointer':'not-allowed', fontWeight:700}}>确认导入</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Cancel modal */}
       {cancelTarget && (
         <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
@@ -423,7 +553,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
           {/* View mode toggle */}
           <div style={{display:'flex', background:'rgba(255,255,255,0.1)', borderRadius:8, overflow:'hidden'}}>
-            {[{v:'grid',icon:'⊞'},{v:'list',icon:'☰'}].map(({v,icon})=>(
+            {[{v:'grid',icon:'⊞'},{v:'table',icon:'⊟'},{v:'list',icon:'☰'}].map(({v,icon})=>(
               <button key={v} onClick={()=>setViewMode(v)} style={{
                 background: viewMode===v ? 'rgba(255,255,255,0.25)' : 'transparent',
                 border:'none', color:'white', padding:'7px 12px', cursor:'pointer', fontSize:15,
@@ -433,13 +563,16 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
           <button className="btn" onClick={onViewCompleted} style={{background:'rgba(255,255,255,0.15)', color:'white', border:'1px solid rgba(255,255,255,0.3)', borderRadius:10, padding:'10px 16px', fontWeight:600, cursor:'pointer', fontSize:13}}>
             📊 已完成记录
           </button>
+          <button className="btn" onClick={()=>setShowImportModal(true)} style={{background:'rgba(255,255,255,0.15)', color:'white', border:'1px solid rgba(255,255,255,0.3)', borderRadius:10, padding:'10px 16px', fontWeight:600, cursor:'pointer', fontSize:13}}>
+            📥 导入
+          </button>
           <button className="btn" onClick={onNew} style={{background:'#2E75B6', color:'white', border:'none', borderRadius:10, padding:'10px 20px', fontWeight:700, cursor:'pointer', fontSize:14}}>
             + 新建上币任务
           </button>
         </div>
       </div>
 
-      <div style={{maxWidth: viewMode==='grid'?1400:960, margin:'0 auto', padding:'20px 16px'}}>
+      <div style={{maxWidth: viewMode==='grid'?1400:viewMode==='table'?1400:960, margin:'0 auto', padding:'20px 16px'}}>
         {/* Stats bar */}
         {records.length > 0 && (
           <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20}}>
@@ -536,6 +669,23 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                         {(r.chainLabels||[]).map((tag,i)=>(
                           <span key={i} style={{fontSize:11, background:'#F3F4F6', color:'#374151', border:'1px solid #E5E7EB', borderRadius:5, padding:'1px 7px', fontWeight:500}}>{tag}</span>
                         ))}
+                        {/* Blocker pill */}
+                        {r.blocker && <span style={{background:'#FFF7ED', color:'#C2410C', border:'1px solid #FED7AA', borderRadius:5, fontSize:11, padding:'1px 7px', fontWeight:600}}>🚧 {r.blocker}</span>}
+                        {/* Blocker quick-edit */}
+                        <span onClick={e=>e.stopPropagation()}>
+                          {editingBlockerId===r.id ? (
+                            <span style={{display:'flex', alignItems:'center', gap:4}}>
+                              <input autoFocus value={blockerInputVal} onChange={e=>setBlockerInputVal(e.target.value)}
+                                onKeyDown={e=>{if(e.key==='Enter'){onUpdate({...r,blocker:blockerInputVal.trim(),updatedAt:new Date().toISOString()});setEditingBlockerId(null);}if(e.key==='Escape')setEditingBlockerId(null);}}
+                                placeholder="卡点说明..."
+                                style={{fontSize:11, border:'1.5px solid #FB923C', borderRadius:5, padding:'2px 6px', fontFamily:'inherit', outline:'none', width:120}}/>
+                              <button onClick={()=>{onUpdate({...r,blocker:blockerInputVal.trim(),updatedAt:new Date().toISOString()});setEditingBlockerId(null);}} style={{background:'#C2410C', color:'white', border:'none', borderRadius:4, padding:'2px 7px', fontSize:11, cursor:'pointer', fontWeight:700}}>保存</button>
+                              <button onClick={()=>setEditingBlockerId(null)} style={{background:'none', border:'1px solid #E5E7EB', borderRadius:4, padding:'2px 6px', fontSize:11, cursor:'pointer', color:'#6B7280'}}>✕</button>
+                            </span>
+                          ) : (
+                            <span onClick={()=>{setEditingBlockerId(r.id);setBlockerInputVal(r.blocker||'');}} style={{fontSize:11, color:'#9CA3AF', cursor:'pointer'}} title="编辑卡点">✏</span>
+                          )}
+                        </span>
                         <span style={{fontSize:12, color:'#9CA3AF'}}>更新 {fmtDate(r.updatedAt)}</span>
                         {status==='in_progress' && (
                           <span style={{display:'flex', alignItems:'center', gap:5}} onClick={e=>e.stopPropagation()}>
@@ -604,6 +754,72 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
             })}
           </div>
         ) : (
+          // ── 表格模式 ──
+          viewMode==='table' ? (
+          <div style={{background:'white', borderRadius:14, boxShadow:'0 1px 6px rgba(0,0,0,0.07)', overflow:'hidden'}}>
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%', borderCollapse:'collapse', fontSize:13}}>
+                <thead>
+                  <tr style={{background:'#F3F4F6', position:'sticky', top:0, zIndex:1}}>
+                    {['Token','区块链','交易对','站点','产品','MM','卡点','上线时间','进度','状态'].map(col=>(
+                      <th key={col} style={{padding:'10px 12px', textAlign:'left', fontWeight:700, color:'#374151', borderBottom:'2px solid #E5E7EB', whiteSpace:'nowrap', fontSize:12}}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((r,i)=>{
+                    const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
+                    const done = Object.values(r.checked||{}).filter(Boolean).length;
+                    const total = checklist.length;
+                    const pct = total ? Math.round(done/total*100) : 0;
+                    const status = getRecordStatus(r, total);
+                    const sm = STATUS_META[status];
+                    const isCancelled = status === 'cancelled';
+                    const siteInfo = SITES.find(s=>s.id===r.site);
+                    const prodInfo = PRODUCTS.find(p=>p.id===r.product);
+                    const siteColor = siteInfo?.color || '#6B7280';
+                    const blockerDisplay = r.blocker ? (r.blocker.length>25 ? r.blocker.slice(0,25)+'…' : r.blocker) : '—';
+                    return (
+                      <tr key={r.id} onClick={()=>onOpen(r.id)} style={{
+                        background: i%2===0?'white':'#F9FAFB',
+                        borderBottom:'1px solid #F3F4F6',
+                        cursor:'pointer', opacity: isCancelled?0.5:1,
+                        transition:'background 0.1s',
+                      }}
+                      onMouseEnter={e=>e.currentTarget.style.background='#EBF4FB'}
+                      onMouseLeave={e=>e.currentTarget.style.background=i%2===0?'white':'#F9FAFB'}>
+                        <td style={{padding:'9px 12px', fontWeight:700, color:'#111827', whiteSpace:'nowrap'}}>{r.tokenSymbol||r.tokenName}</td>
+                        <td style={{padding:'9px 12px', color:'#0369A1', fontSize:12}}>{(r.chainLabels||[]).join(' / ')||'—'}</td>
+                        <td style={{padding:'9px 12px', color:'#374151', fontSize:12, maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{r.chainOnly?'仅上链':(r.quoteCurrencies||[]).length>0?(r.quoteCurrencies).map(q=>`${r.tokenSymbol||r.tokenName}/${q}`).join(', '):r.tokenName}</td>
+                        <td style={{padding:'9px 12px'}}>
+                          <span style={{background:isCancelled?'#F3F4F6':siteInfo?.bg, color:siteColor, fontWeight:700, fontSize:11, padding:'2px 8px', borderRadius:99, border:`1px solid ${siteColor}40`, whiteSpace:'nowrap'}}>{siteInfo?.icon} {r.site}</span>
+                        </td>
+                        <td style={{padding:'9px 12px', color:'#374151', fontSize:12, whiteSpace:'nowrap'}}>{prodInfo?.icon} {r.product}{r.stableHub?' +SH':''}{r.launchpool?' +LP':''}</td>
+                        <td style={{padding:'9px 12px', color:'#6B7280', fontSize:12}}>{r.expectedMM||'—'}</td>
+                        <td style={{padding:'9px 12px', fontSize:12}}>
+                          {r.blocker ? <span style={{background:'#FFF7ED', color:'#C2410C', border:'1px solid #FED7AA', borderRadius:5, fontSize:11, padding:'1px 7px', fontWeight:600}} title={r.blocker}>🚧 {blockerDisplay}</span> : <span style={{color:'#D1D5DB'}}>—</span>}
+                        </td>
+                        <td style={{padding:'9px 12px', color:'#D97706', fontSize:12, fontWeight:600, whiteSpace:'nowrap'}}>{fmtLaunchTime(r.expectedLaunchTime)||'—'}</td>
+                        <td style={{padding:'9px 12px'}}>
+                          <div style={{display:'flex', alignItems:'center', gap:6}}>
+                            <span style={{fontSize:12, fontWeight:600, color:'#374151', whiteSpace:'nowrap'}}>{done}/{total}</span>
+                            <div style={{width:60, background:'#E5E7EB', borderRadius:99, height:5, overflow:'hidden', flexShrink:0}}>
+                              <div style={{width:`${pct}%`, height:'100%', background:pct===100?'#059669':isCancelled?'#D1D5DB':siteColor, borderRadius:99}}/>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{padding:'9px 12px'}}>
+                          <span style={{background:sm.bg, color:sm.color, fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99, whiteSpace:'nowrap'}}>{sm.label}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{padding:'8px 14px', background:'#F8FAFC', borderTop:'1px solid #E5E7EB', fontSize:12, color:'#9CA3AF'}}>共 {sorted.length} 条记录</div>
+          </div>
+          ) : (
           // ── 列表模式：单列 ──
           <div style={{display:'flex', flexDirection:'column', gap:7}}>
             {sorted.map(r => {
@@ -646,6 +862,23 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                         {(r.chainLabels||[]).map((tag,i)=>(
                           <span key={i} style={{fontSize:11, background:'#F3F4F6', color:'#374151', border:'1px solid #E5E7EB', borderRadius:5, padding:'1px 7px', fontWeight:500}}>{tag}</span>
                         ))}
+                        {/* Blocker pill */}
+                        {r.blocker && <span style={{background:'#FFF7ED', color:'#C2410C', border:'1px solid #FED7AA', borderRadius:5, fontSize:11, padding:'1px 7px', fontWeight:600}}>🚧 {r.blocker}</span>}
+                        {/* Blocker quick-edit */}
+                        <span onClick={e=>e.stopPropagation()}>
+                          {editingBlockerId===r.id ? (
+                            <span style={{display:'flex', alignItems:'center', gap:4}}>
+                              <input autoFocus value={blockerInputVal} onChange={e=>setBlockerInputVal(e.target.value)}
+                                onKeyDown={e=>{if(e.key==='Enter'){onUpdate({...r,blocker:blockerInputVal.trim(),updatedAt:new Date().toISOString()});setEditingBlockerId(null);}if(e.key==='Escape')setEditingBlockerId(null);}}
+                                placeholder="卡点说明..."
+                                style={{fontSize:11, border:'1.5px solid #FB923C', borderRadius:5, padding:'2px 6px', fontFamily:'inherit', outline:'none', width:120}}/>
+                              <button onClick={()=>{onUpdate({...r,blocker:blockerInputVal.trim(),updatedAt:new Date().toISOString()});setEditingBlockerId(null);}} style={{background:'#C2410C', color:'white', border:'none', borderRadius:4, padding:'2px 7px', fontSize:11, cursor:'pointer', fontWeight:700}}>保存</button>
+                              <button onClick={()=>setEditingBlockerId(null)} style={{background:'none', border:'1px solid #E5E7EB', borderRadius:4, padding:'2px 6px', fontSize:11, cursor:'pointer', color:'#6B7280'}}>✕</button>
+                            </span>
+                          ) : (
+                            <span onClick={()=>{setEditingBlockerId(r.id);setBlockerInputVal(r.blocker||'');}} style={{fontSize:11, color:'#9CA3AF', cursor:'pointer'}} title="编辑卡点">✏</span>
+                          )}
+                        </span>
                         <span style={{fontSize:12, color:'#9CA3AF'}}>更新 {fmtDate(r.updatedAt)}</span>
                         {status==='in_progress' && (
                           <span style={{display:'flex', alignItems:'center', gap:5}} onClick={e=>e.stopPropagation()}>
@@ -707,7 +940,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
               );
             })}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
@@ -791,7 +1024,7 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
         userType, expectedMM,
         expectedLaunchTime: launchIso,
         site, product: prod, tokenType, stableHub: sh, launchpool: lp,
-        checked: {}, notes: '',
+        blocker: '', checked: {}, notes: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         estimatedTime: estimateTime(site, prod, tokenType),
@@ -1165,6 +1398,12 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
   const [noteText, setNoteText] = useState(record.notes||'');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTokenName, setEditTokenName] = useState(record.tokenName||'');
+  const [editExpectedMM, setEditExpectedMM] = useState(record.expectedMM||'');
+  const [editUserType, setEditUserType] = useState(record.userType||'');
+  const [editBlocker, setEditBlocker] = useState(record.blocker||'');
+  const [editLaunchTime, setEditLaunchTime] = useState(toInputVal(record.expectedLaunchTime));
 
   const checked = record.checked || {};
   const done = Object.values(checked).filter(Boolean).length;
@@ -1194,6 +1433,20 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
     onUpdate(updated, msg);
   };
 
+  const openEditModal = () => {
+    setEditTokenName(record.tokenName||'');
+    setEditExpectedMM(record.expectedMM||'');
+    setEditUserType(record.userType||'');
+    setEditBlocker(record.blocker||'');
+    setEditLaunchTime(toInputVal(record.expectedLaunchTime));
+    setShowEditModal(true);
+  };
+  const saveEditModal = () => {
+    const iso = editLaunchTime ? new Date(editLaunchTime).toISOString() : null;
+    onUpdate({...record, tokenName:editTokenName, expectedMM:editExpectedMM, userType:editUserType, blocker:editBlocker, expectedLaunchTime:iso, updatedAt:new Date().toISOString()}, '✏ 记录信息已更新');
+    setShowEditModal(false);
+  };
+
   const saveNote = () => {
     onUpdate({...record, notes:noteText, updatedAt:new Date().toISOString()}, `📝 备注已更新：${record.tokenName}`);
     setEditNote(false);
@@ -1212,6 +1465,57 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
 
   return (
     <div>
+      {/* Edit info modal */}
+      {showEditModal && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
+          <div style={{background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:460, boxShadow:'0 8px 40px rgba(0,0,0,0.18)'}}>
+            <div style={{fontWeight:800, fontSize:17, color:'#111827', marginBottom:16}}>✏ 编辑记录信息</div>
+            <div style={{display:'flex', flexDirection:'column', gap:14}}>
+              <div>
+                <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:5}}>任务名称</div>
+                <input value={editTokenName} onChange={e=>setEditTokenName(e.target.value)}
+                  style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:9, padding:'9px 12px', fontSize:14, fontFamily:'inherit', outline:'none'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:5}}>做市商（MM）</div>
+                <input value={editExpectedMM} onChange={e=>setEditExpectedMM(e.target.value)}
+                  placeholder="例如：Wintermute、GSR..."
+                  style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:9, padding:'9px 12px', fontSize:14, fontFamily:'inherit', outline:'none'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:5}}>用户类型</div>
+                <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+                  {['PI（专业投资者）','零售 Retail','两者','不适用'].map(opt=>(
+                    <button key={opt} onClick={()=>setEditUserType(editUserType===opt?'':opt)} style={{
+                      border:`1.5px solid ${editUserType===opt?C.navy:'#E5E7EB'}`,
+                      borderRadius:8, padding:'6px 12px', cursor:'pointer',
+                      background: editUserType===opt?'#D6E4F0':'white',
+                      fontSize:12, fontWeight: editUserType===opt?700:400,
+                      color: editUserType===opt?C.navy:'#374151',
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:5}}>当前卡点</div>
+                <input value={editBlocker} onChange={e=>setEditBlocker(e.target.value)}
+                  placeholder="例如：等待合规尽调、LP未确认..."
+                  style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:9, padding:'9px 12px', fontSize:14, fontFamily:'inherit', outline:'none'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:13, fontWeight:600, color:'#374151', marginBottom:5}}>期望上线时间</div>
+                <input type="datetime-local" value={editLaunchTime} onChange={e=>setEditLaunchTime(e.target.value)} step="3600"
+                  style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:9, padding:'9px 12px', fontSize:14, fontFamily:'inherit', outline:'none'}}/>
+              </div>
+            </div>
+            <div style={{fontSize:12, color:'#9CA3AF', marginTop:12, marginBottom:4}}>注：站点、产品、代币类型不可编辑（影响清单结构）</div>
+            <div style={{display:'flex', gap:10, marginTop:12, justifyContent:'flex-end'}}>
+              <button onClick={()=>setShowEditModal(false)} style={{border:'1px solid #E5E7EB', background:'white', borderRadius:9, padding:'9px 18px', fontSize:13, cursor:'pointer', color:'#6B7280', fontWeight:600}}>取消</button>
+              <button onClick={saveEditModal} style={{border:'none', background:'#2E75B6', color:'white', borderRadius:9, padding:'9px 20px', fontSize:13, cursor:'pointer', fontWeight:700}}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Cancel reason modal */}
       {showCancelModal && (
         <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
@@ -1240,6 +1544,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
         <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
           <button className="btn" onClick={onBack} style={{background:'rgba(255,255,255,0.15)', border:'none', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13}}>← 返回列表</button>
           <button className="btn" onClick={()=>window.print()} style={{background:'rgba(255,255,255,0.15)', border:'none', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13}}>🖨 打印</button>
+          <button className="btn" onClick={openEditModal} style={{background:'rgba(255,255,255,0.15)', border:'none', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13}}>✏ 编辑信息</button>
           {isCancelled
             ? <button className="btn" onClick={handleRestore} style={{marginLeft:'auto', background:'rgba(16,185,129,0.25)', border:'1px solid rgba(16,185,129,0.5)', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13, fontWeight:600}}>↩ 恢复任务</button>
             : <button className="btn" onClick={()=>{setCancelReason('');setShowCancelModal(true);}} style={{marginLeft:'auto', background:'rgba(220,38,38,0.25)', border:'1px solid rgba(220,38,38,0.5)', color:'white', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13, fontWeight:600}}>✕ 取消任务</button>
@@ -1474,9 +1779,34 @@ function App() {
   const [activeId, setActiveId] = useState(null);
   const [toasts, setToasts] = useState([]);
 
-  // 初始加载 + 实时同步
+  // 初始加载 + 本地数据迁移 + 实时同步
   useEffect(() => {
-    loadRecordsFromDB().then(data => { setRecords(data); setLoading(false); });
+    loadRecordsFromDB().then(async cloudData => {
+      // 检查 localStorage 是否有旧数据需要迁移
+      const LOCAL_KEY = 'osl_listing_records_v2';
+      let localData = [];
+      try { localData = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); } catch {}
+
+      if (localData.length > 0) {
+        // 有本地数据：把本地没有的条目上传到云端（避免覆盖云端已有的）
+        const cloudIds = new Set(cloudData.map(r => r.id));
+        const toMigrate = localData.filter(r => !cloudIds.has(r.id));
+        if (toMigrate.length > 0) {
+          await Promise.all(toMigrate.map(r => syncRecord(r)));
+        }
+        // 合并云端已有 + 本地迁移的
+        const merged = [...cloudData, ...toMigrate];
+        setRecords(merged);
+        // 清除本地缓存，防止重复迁移
+        localStorage.removeItem(LOCAL_KEY);
+        if (toMigrate.length > 0) {
+          setTimeout(() => addToast(`✅ 已将 ${toMigrate.length} 条本地任务迁移到云端`, 'success'), 500);
+        }
+      } else {
+        setRecords(cloudData);
+      }
+      setLoading(false);
+    });
     const channel = db.channel('listing-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'listing_records' }, payload => {
         if (payload.eventType === 'DELETE') {
@@ -1536,6 +1866,12 @@ function App() {
     addToast(`↩ 已恢复：${r?.tokenName||''}`, 'success');
   };
 
+  const handleImport = (arr) => {
+    arr.forEach(r => syncRecord(r));
+    setRecords(prev => [...prev, ...arr]);
+    addToast(`📥 已导入 ${arr.length} 条记录`, 'success');
+  };
+
   const handleOpen = (id) => { setActiveId(id); setView('checklist'); };
   const handleBack = () => { setActiveId(null); setView('dashboard'); };
 
@@ -1565,7 +1901,7 @@ function App() {
       </div>
       <style>{`@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}`}</style>
 
-      {view==='dashboard' && <Dashboard records={records} onOpen={handleOpen} onNew={()=>setView('new')} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} onViewCompleted={()=>setView('completed')}/>}
+      {view==='dashboard' && <Dashboard records={records} onOpen={handleOpen} onNew={()=>setView('new')} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} onViewCompleted={()=>setView('completed')} onImport={handleImport}/>}
       {view==='new' && <NewListingWizard onSave={handleSave} onCancel={()=>setView('dashboard')} existingRecords={records} onOpenExisting={id=>{ setActiveId(id); setView('checklist'); }}/>}
       {view==='checklist' && activeRecord && <ChecklistView record={activeRecord} onBack={handleBack} onUpdate={handleUpdate} addToast={addToast}/>}
       {view==='completed' && <CompletedTable records={records} onBack={()=>setView('dashboard')}/>}
