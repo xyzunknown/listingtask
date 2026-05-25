@@ -44,7 +44,8 @@ const PRODUCTS = [
   { id:'OTC',       label:'OTC',            icon:'🤝', note:'最快，无需底仓配资' },
   { id:'Perp',      label:'Perp 合约',      icon:'📈', note:'仅Global，需风险限额' },
   { id:'ChainOnly', label:'仅上链',          icon:'⛓️', note:'只配置钱包，无交易对，充提即完成' },
-  { id:'WealthToken', label:'理财代币',       icon:'💰', note:'仅HK，仅上链不开充提，填参数即可' },
+  { id:'WealthToken',  label:'理财代币',       icon:'💰', note:'仅HK，仅上链不开充提，填参数即可' },
+  { id:'Maintenance',  label:'网络维护关充提', icon:'🔧', note:'关充提+灰度测试，通知SFC+客户' },
 ];
 const TOKEN_TYPES = [
   { id:'subtoken',  label:'子代币', icon:'🪙', note:'已支持链上的新代币（如ERC-20）' },
@@ -87,8 +88,8 @@ function buildChecklist(site, product, tokenType, opts={}) {
   const stableHub  = !!opts.stableHub;
   const launchpool = !!opts.launchpool;
   const s = [];
-  const add = (phase, tag, task, owner, contact, time, note='', critical=false) =>
-    s.push({ phase, tag, task, owner, contact, time, note, critical });
+  const add = (phase, tag, task, owner, contact, time, note='', critical=false, inputType=null, inputKey=null, inputOptions=null) =>
+    s.push({ phase, tag, task, owner, contact, time, note, critical, inputType, inputKey, inputOptions });
 
   // PRE-CONDITIONS
   if (site==='ID') add('前置确认','pre','确认项目已在印尼政府 CFX 白名单','Listing Ops','Aisha Mi','提前确认','印尼站不需要VAAP，但币种必须在CFX白名单内才能上线',true);
@@ -101,13 +102,15 @@ function buildChecklist(site, product, tokenType, opts={}) {
   if (product==='Orderbook'||product==='RFQ')
     add('前置确认','pre','确认 LP / MM 流动性支持','流动性',site==='HK'?'George Qiao / Andre Ki':site==='Global'?'Leo Cheng / Josiah Choong':'Aisha Mi / George Qiao','提前确认','确认做市商能否支持该币对。如不可支持，必须@Freya Yu说明卡点',true);
 
-  // BD
-  add('业务评估','bd','商业评估（内部评审会）','BD / 研究院','Shirley Kwok / Scarlett Zhang','3–5天','按资产筛选评估框架评分，通过Listing内部评审会 + Lark上币评估流程决定');
-  add('业务评估','bd','签署 NDA','BD','Shirley Kwok','1天','必须在讨论任何实质性商业细节前完成。禁止项目方提前对外披露任何信息',true);
-  add('业务评估','bd','商务谈判：确定费用/MM/活动，签署 Listing Agreement','BD / 活动','Shirley Kwok / Freya Yu','按需','非标准合同条款必须法务专项审核。活动形式需提前获得合规确认');
+  // BD (skip for Maintenance — no commercial evaluation needed)
+  if (product!=='Maintenance') {
+    add('业务评估','bd','商业评估（内部评审会）','BD / 研究院','Shirley Kwok / Scarlett Zhang','3–5天','按资产筛选评估框架评分，通过Listing内部评审会 + Lark上币评估流程决定');
+    add('业务评估','bd','签署 NDA','BD','Shirley Kwok','1天','必须在讨论任何实质性商业细节前完成。禁止项目方提前对外披露任何信息',true);
+    add('业务评估','bd','商务谈判：确定费用/MM/活动，签署 Listing Agreement','BD / 活动','Shirley Kwok / Freya Yu','按需','非标准合同条款必须法务专项审核。活动形式需提前获得合规确认');
+  }
 
-  // COMPLIANCE
-  if (site!=='ID') {
+  // COMPLIANCE (skip for Maintenance)
+  if (site!=='ID' && product!=='Maintenance') {
     add('合规/VAAP','compliance','完成合规尽调报告（VAAP尽调）','合规','Scarlett Zhang（备份：Eddie Xin）',site==='HK'?'≤2周':'约1周','政策依据：Virtual Asset Admission Policy - Jan 2026\n模板：[HK][Template] VAAP New Admission',true);
     add('合规/VAAP','compliance','获取法律意见书（Legal Opinion）','法务','Ella Bai','HK约2周，Global约1周','每个上线站点需要独立一份。可与尽调并行推进');
     add('合规/VAAP','compliance','获取风险评估报告 + 平台参数','风控','Yaoxi Zhong / Tesla Ma','半天-1天','从风控获取：平台充提参数、交易参数上下限。后续配置时需要用到');
@@ -130,7 +133,8 @@ function buildChecklist(site, product, tokenType, opts={}) {
     add('执行配置','exec','上币参数配置（Coinhub / 币种信息表）','Listing Ops','Rebeca Zhang','半天','ERC-20：在Coinhub填写（需VAAP批准+风险参数+财务Netsuite账号）\n其他链：发信息表给@Huaxi Li\n风险参数：@Tom Ma / @Prakash\n财务账号：@Ringo Lo');
     add('执行配置','exec','钱包配置','钱包','Huaxi Li','约2天','提交任务后管理产研配置，含线下部署');
     add('执行配置','exec','Apollo 前端配置（新增表+移动端）','现货技术','Lucas Mak','2小时（审批后）','提交生成新表申请单，创建币对数据库表\napollo socket-service kline.support.symbols添加新币种\napollo user-service trade_pairs添加币对\n⚠ Apollo数据必须与MG后台配置完全一致');
-    add('执行配置','exec','（HK专属）Jim Ball 后台配置 + 测试/生产环境验证','TechOps','Jim Ball','视排期','Jim Ball 负责系统后台配置，完成测试环境验证后再推送至生产环境确认。\n⚠ 测试环境与生产环境须分别确认，不可跳过测试环境直接上生产',true);
+    add('执行配置','exec','（HK专属）Prakash Konagi 后台配置','TechOps','Jim Ball / Prakash Konagi','视排期','Prakash Konagi 负责后台 set-up 配置。配置完成后进入白名单 + Puhui 做市商测试阶段',true);
+    add('执行配置','exec','（HK专属）白名单配置 + 与 Puhui MM 联调测试','TechOps / Listing Ops','Prakash Konagi / Puhui MM','Prakash 完成配置后','Prakash 完成后台配置后：\n① 将 Puhui 做市商账号加入白名单\n② 配合 Puhui MM 进行联调测试，确认报价、成交、充提均正常\n③ 测试通过后才可进入正式上线流程',true);
     add('执行配置','exec','充提测试 + 验证','出入金','Philip Ho / Tolkki Xu','2天','KYT配置 → 充值测试 → 提现测试');
     add('执行配置','exec','更新网站交易对页面','Listing Ops','通知 Aaron Du','上线前1天','https://trade-hk.osl.com/pages/trading-pairs/professional-investors-and-corporates');
     add('执行配置','exec','通知 Omnibus','Listing Ops','Kevin Law','上线前','通知Omnibus负责人，让broker支持新币对。所有产品都需要这一步');
@@ -165,8 +169,8 @@ function buildChecklist(site, product, tokenType, opts={}) {
     add('执行配置','exec','（HK专属）Jim Ball 后台配置 + 测试/生产环境验证','TechOps','Jim Ball','视排期','Jim Ball 负责系统后台配置，完成测试环境验证后再推送至生产环境确认。\n⚠ 测试环境与生产环境须分别确认，不可跳过测试环境直接上生产',true);
     add('执行配置','exec','OTC 交易对配置 + 测试','产品','Irene Li','1天','配置完成后验证');
     add('执行配置','exec','通知 Omnibus','Listing Ops','Kevin Law','上线前','通知Omnibus负责人，让broker支持新币对');
-    add('正式上线','launch','开启充提全量开关','Listing Ops','Rebeca Zhang','上线当天','',true);
-    add('正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','提供 Token Launch Info Sheet');
+    add('正式上线','launch','【宣发前必须完成】Spirit 移除白名单 + 开启充提','Listing Ops / TechOps','Spirit（移除白名单）→ Yiyang Lu / Teddy（后台开启充提）','宣发前','⚠️ 此步骤是宣发的前置条件，未完成不得进行宣发。\n① Spirit 负责在系统后台将白名单限制移除\n② Yiyang Lu 或 Teddy 在后台将充提开关打开\n两步都完成后才可通知宣发',true);
+    add('正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','开充提后立即进行','提供 Token Launch Info Sheet。⚠ 确认充提已开启、白名单已移除后才可宣发');
   }
 
   // EXECUTION — Global RFQ/OTC
@@ -182,6 +186,8 @@ function buildChecklist(site, product, tokenType, opts={}) {
     if (product==='RFQ')
       add('执行配置','exec','底仓配资（RFQ专属）','Trade Ops / Global Trader','Chris Cheng / Hetty Li\nJosiah Choong','1天','各站分别申请风险信用额度，Trade Ops执行底仓账户配置。前置：Henry Tam确认trading资金到位');
     if (product==='RFQ' && stableHub) {
+      add('执行配置','exec','【StableHub】确认币种参数','Listing Ops / 产品','Henry Wong','配置前确认','向 @Henry Wong 确认币种参数（Token-level parameters），包括币种基础信息、精度等配置',true);
+      add('执行配置','exec','【StableHub】确认币对参数','Listing Ops / 产品','Anduin Lothar / Jian Pan','配置前确认','向 @Anduin Lothar 或 @Jian Pan 确认币对参数（Pair-level parameters），包括限额规则、精度、交易对配置等',true);
       add('执行配置','exec','【StableHub】确认币对限额规则','Listing Ops / 产品','Eyang / Irene Li','配置前确认','确认每个交易对的 1:1 兑换额度上限（例：每位用户每日 $50K）及超限处理方式（按市价成交 or 无法交易）。\n示例：USD/USDC 每人每日 50K 1:1；USDT 交易对每人每月 20K 1:1；超出限额无法交易',true);
       add('执行配置','exec','【StableHub】底仓资金入账','Listing Ops / Trade Ops','Eyang（申请）→ Harry Tian（转账）','配置前完成','Eyang 申请底仓资金金额及目标地址，Harry Tian 将资金转入 StableHub 对应账户。入账后截图存档',true);
       add('执行配置','exec','【StableHub】通知产研上线','Listing Ops','Eyang → 【Stablehub/RFQ 相关问题沟通】群','上线当天','在【Stablehub/RFQ 相关问题沟通】微信群中通知产研。\n\n话术参考：\nhi StableHub 本周新增上线 XXX 交易对：XXX/USD，XXX/USDC，XXX/USDT。已经确认无市价，USD 和 USDC 交易对初步设置每人每日 50k 1:1 限额，USDT 交易对设置每人每月 20k 1:1 限额；超出限额无法交易。底仓已经转入了，打了 50k。后续根据限额规则产品的更新再统一调整限额。',true);
@@ -243,15 +249,32 @@ function buildChecklist(site, product, tokenType, opts={}) {
     add('正式上线','launch','开启充提全量开关','Listing Ops','Rebeca Zhang','配置完成后','充提开关打开后即完成，无需交易对配置',true);
   }
 
+  // EXECUTION — 网络维护关充提
+  if (product==='Maintenance') {
+    add('执行配置','exec','通知 SFC','合规','Scarlett Zhang','操作前','网络维护关充提前必须通知 SFC，由 Scarlett Zhang 负责发送通知',true);
+    add('执行配置','exec','通知客户','Listing Ops / 客服','Kevin Law','操作前','通过官方渠道通知受影响客户，说明维护原因、预计时长及影响范围',true);
+    add('执行配置','exec','关闭充提开关','Listing Ops','Yiyang Lu','执行时','在各站后台关闭对应链/币种的充提开关（全球站 + 印尼站）',true);
+    add('执行配置','exec','全量切换为灰度模式','Listing Ops','Yiyang Lu','关充提后立即执行','关闭充提后同步将全量切换为灰度，确保维护期间只有白名单用户可见/可操作',true);
+    add('执行配置','exec','灰度环境测试','技术/运营','Zhengfan Wang / Sam Wang','灰度期间','完成灰度环境下的测试验证，确认链路恢复正常后通知 Yiyang Lu',true);
+    add('正式上线','launch','从灰度切回全量','Listing Ops','Yiyang Lu','测试完成后','收到 Zhengfan Wang / Sam Wang 确认后，将灰度切回全量，恢复正常上线状态',true);
+    add('正式上线','launch','重新开启充提开关','Listing Ops','Yiyang Lu','切回全量后','确认全量恢复正常后，重新开启各站的充提开关',true);
+  }
+
   // EXECUTION — 理财代币（HK专属）
   if (product==='WealthToken') {
     add('执行配置','exec','收集并填写上币参数','Listing Ops','Freya Yu / Eyang / Teddy','上线前','收集香港站标准上币所需参数（代币信息、合规文件、风险参数等），由 Freya 团队、Eyang 和 Teddy 共同提供',true);
+    add('执行配置','exec','收集 Logo','Listing Ops','Freya Yu / Eyang / Teddy','上线前','收集代币 Logo 文件（SVG + PNG 格式），尽早提供，App 端通知 Darcy Zhu 更新');
+    add('执行配置','exec','合约地址','Listing Ops','Freya Yu / Eyang / Teddy','上线前','填写代币合约地址',false,'text','contractAddress');
+    add('执行配置','exec','净值价格','Listing Ops','Freya Yu / Eyang / Teddy','上线前','填写代币净值价格（NAV Price）',false,'text','navPrice');
+    add('执行配置','exec','风险等级','Listing Ops','Freya Yu / Eyang / Teddy','上线前','选择产品风险等级',false,'select','riskLevel',['High','Aggressive','Complex','Low']);
+    add('执行配置','exec','参数准备','Listing Ops','Freya Yu / Eyang / Teddy','上线前','确认所有参数（合约地址、净值价格、风险等级、Logo）已准备完毕，可提交 Lark Sheet',true);
+    add('执行配置','exec','钱包侧完成部署','钱包','Huaxi Li','上线前','钱包侧完成代币链上部署配置，Huaxi Li 在群里确认',true);
     add('执行配置','exec','将参数更新到 Lark Sheet','Listing Ops','Freya Yu / Eyang / Teddy','提交当天','将所有参数填写并更新到对应 Lark Sheet 表格：\nhttps://osl-global.sg.larksuite.com/wiki/Z9C8wV2LRiRcslksYQ4lBFoSgnh?sheet=3z0AVW',true);
     add('正式上线','launch','确认参数已提交完成','Listing Ops','Freya Yu','提交后','确认 Lark Sheet 中所有参数已填写完整，无遗漏。\n⚠ 理财代币不开充提，不配置后台币对，仅上链参数提交即完成',true);
   }
 
   // 通用：钱包侧完成部署 + 充提验证（所有非仅上链、非理财代币）
-  if (product!=='ChainOnly' && product!=='WealthToken') {
+  if (product!=='ChainOnly' && product!=='WealthToken' && product!=='Maintenance') {
     add('执行配置','exec','确认钱包侧完成部署 + 充提验证','钱包','Huaxi Li（在群里通知完成）','等待 Huaxi 通知','Huaxi Li 完成链上部署后会在群里发通知。\n收到通知后执行充提验证：充值测试 → 提现测试 → 确认到账',true);
   }
 
@@ -261,7 +284,7 @@ function buildChecklist(site, product, tokenType, opts={}) {
   }
 
   // 通用：上线准备（非仅上链）— Rebeca / Freya / Eyang / Teddy
-  if (product!=='ChainOnly' && product!=='WealthToken') {
+  if (product!=='ChainOnly' && product!=='WealthToken' && product!=='Maintenance') {
     add('执行配置','exec','通知 MM 交易参数（价格精度 / 数量精度）并更新对外表格','Listing Ops','Rebeca Zhang / Freya Yu / Eyang','上线前','将每个交易对的价格精度（Price Precision）和数量精度（Quantity Precision）通知 MM，并更新到对外共享表格：\nhttps://docs.google.com/spreadsheets/d/18UVobtX7Cn1Pe3Y9BImPvK4VHLs60nr9rFtN0ExY9Ko/edit?pli=1&gid=0#gid=0',true);
     add('执行配置','exec','通知宣发群上线信息','Listing Ops','Rebeca Zhang / Freya Yu / Eyang / Teddy','上线前1天','在宣发群通知上线时间、币种、交易对、产品类型，附带链接或公告草稿');
     if (product==='Orderbook') add('执行配置','exec','通知 Puhui MM 借币','Listing Ops','Rebeca Zhang / Freya Yu','上线前','通知 Puhui 做市商提前安排借币，确保开盘时有足够流动性',true);
@@ -287,6 +310,7 @@ function estimateTime(site, product, tokenType) {
   if (site==='ID') return nc?'约2–3周':'约1周';
   if (product==='ChainOnly')    return nc?'约1–2周':'约2–3天';
   if (product==='WealthToken')  return '约1周';
+  if (product==='Maintenance')  return '按维护窗口';
   return '—';
 }
 
@@ -302,15 +326,19 @@ async function syncRecord(record) {
   if (error) console.error('Sync error:', error);
 }
 function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-function computeStatus(checked, total) {
-  const done = Object.values(checked).filter(Boolean).length;
+function countDone(checked, naSteps) {
+  return Object.values(checked||{}).filter(Boolean).length
+       + Object.values(naSteps||{}).filter(Boolean).length;
+}
+function computeStatus(checked, total, naSteps) {
+  const done = countDone(checked, naSteps);
   if (done===0) return 'not_started';
   if (done===total) return 'completed';
   return 'in_progress';
 }
 function getRecordStatus(r, total) {
   if (r.cancelled) return 'cancelled';
-  return computeStatus(r.checked||{}, total);
+  return computeStatus(r.checked||{}, total, r.naSteps||{});
 }
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -347,7 +375,7 @@ function ProgressRing({ pct, size=48, stroke=4, color='#2E75B6' }) {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onViewCompleted, onImport }) {
+function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onViewCompleted, onImport, siteFilter }) {
   const [filter, setFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list' | 'table'
   const [cancelTarget, setCancelTarget] = useState(null);
@@ -433,7 +461,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                 site, product, tokenType:'subtoken',
                 stableHub: site==='Global' && product==='RFQ' ? stableHub : false,
                 launchpool: site==='ID' ? launchpool : false,
-                blocker: '', checked: {}, notes: '',
+                blocker: '', checked: {}, naSteps: {}, stepNotes: {}, notes: '',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 estimatedTime: estimateTime(site, product, 'subtoken'),
@@ -463,6 +491,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
   };
 
   const filtered = records.filter(r => {
+    if (siteFilter && r.site !== siteFilter) return false;
     if (filter==='all') return true;
     const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
     const status = getRecordStatus(r, checklist.length);
@@ -607,7 +636,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
           </div>
         ) : viewMode==='grid' ? (
           // ── 网格模式：三列按站点分组 ──
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, alignItems:'start'}}>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(360px,1fr))', gap:14, alignItems:'start'}}>
             {SITES.map(siteObj => {
               const siteRecords = sorted.filter(r => r.site === siteObj.id);
               return (
@@ -650,12 +679,12 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                   opacity: isCancelled ? 0.55 : 1,
                 }} onClick={()=>onOpen(r.id)}>
                   {/* Main row */}
-                  <div style={{display:'flex', alignItems:'center', gap:12, padding: isGrid ? '9px 12px' : '12px 16px'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:14, padding:'13px 16px'}}>
                     <ProgressRing pct={pct} />
                     <div style={{flex:1, minWidth:0}}>
                       {/* Row 1: name + badges */}
                       <div style={{display:'flex', alignItems:'center', gap:7, flexWrap:'wrap'}}>
-                        <span style={{fontWeight:800, fontSize:16, color:'#111827'}}>{r.tokenName}</span>
+                        <span style={{fontWeight:800, fontSize:17, color:'#111827'}}>{r.tokenName}</span>
                         <span style={{background: isCancelled?'#F3F4F6':siteInfo?.bg, color:siteColor, fontSize:11, fontWeight:800, padding:'2px 9px', borderRadius:99, border:`1px solid ${siteColor}40`}}>{siteInfo?.icon} {r.site}</span>
                         <span style={{background:'#F3F4F6', color:'#374151', fontSize:11, fontWeight:600, padding:'2px 9px', borderRadius:99}}>{prodInfo?.icon} {r.product}{r.stableHub?' +SH':''}{r.launchpool?' +LP':''}</span>
                         <span style={{background:sm.bg, color:sm.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99}}>{sm.label}</span>
@@ -849,7 +878,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                     <ProgressRing pct={pct} />
                     <div style={{flex:1, minWidth:0}}>
                       <div style={{display:'flex', alignItems:'center', gap:7, flexWrap:'wrap'}}>
-                        <span style={{fontWeight:800, fontSize:16, color:'#111827'}}>{r.tokenName}</span>
+                        <span style={{fontWeight:800, fontSize:17, color:'#111827'}}>{r.tokenName}</span>
                         <span style={{background:isCancelled?'#F3F4F6':siteInfo?.bg, color:siteColor, fontSize:11, fontWeight:800, padding:'2px 9px', borderRadius:99, border:`1px solid ${siteColor}40`}}>{siteInfo?.icon} {r.site}</span>
                         <span style={{background:'#F3F4F6', color:'#374151', fontSize:11, fontWeight:600, padding:'2px 9px', borderRadius:99}}>{prodInfo?.icon} {r.product}{r.stableHub?' +SH':''}{r.launchpool?' +LP':''}</span>
                         <span style={{background:sm.bg, color:sm.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99}}>{sm.label}</span>
@@ -1024,7 +1053,7 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
         userType, expectedMM,
         expectedLaunchTime: launchIso,
         site, product: prod, tokenType, stableHub: sh, launchpool: lp,
-        blocker: '', checked: {}, notes: '',
+        blocker: '', checked: {}, naSteps: {}, stepNotes: {}, notes: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         estimatedTime: estimateTime(site, prod, tokenType),
@@ -1406,10 +1435,11 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
   const [editLaunchTime, setEditLaunchTime] = useState(toInputVal(record.expectedLaunchTime));
 
   const checked = record.checked || {};
-  const done = Object.values(checked).filter(Boolean).length;
   const total = checklist.length;
-  const pct = total ? Math.round(done/total*100) : 0;
   const isCancelled = !!record.cancelled;
+  // done = checked + NA (both count toward progress)
+  const done = countDone(checked, record.naSteps||{});
+  const pct = total ? Math.round(done/total*100) : 0;
   const isComplete = !isCancelled && done===total && total>0;
 
   const handleCancelConfirm = () => {
@@ -1422,15 +1452,41 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
     onUpdate({...record, cancelled: false, cancelReason: '', updatedAt: new Date().toISOString()});
   };
 
+  const naSteps   = record.naSteps   || {};
+  const stepNotes = record.stepNotes || {};
+  const [editingStepNote, setEditingStepNote] = useState(null);
+  const [stepNoteVal, setStepNoteVal] = useState('');
+
   const toggle = (idx) => {
-    const newChecked = {...checked, [idx]: !checked[idx]};
-    const updated = {...record, checked:newChecked, updatedAt:new Date().toISOString()};
-    const step = checklist[idx];
     const nowDone = !checked[idx];
-    const newTotal = Object.values(newChecked).filter(Boolean).length;
-    let msg = nowDone ? `✅ ${step.task.slice(0,28)}` : `↩ 撤销：${step.task.slice(0,24)}`;
-    if (nowDone && newTotal === checklist.length) msg = `🎉 ${record.tokenName} 全部完成！`;
-    onUpdate(updated, msg);
+    const newChecked = {...checked, [idx]: nowDone};
+    const newNA = nowDone ? {...naSteps, [idx]:false} : naSteps;
+    const step = checklist[idx];
+    const newTotal = countDone(newChecked, newNA);
+    let msg = nowDone ? ('✅ ' + step.task.slice(0,28)) : ('↩ 撤销：' + step.task.slice(0,24));
+    if (nowDone && newTotal===checklist.length) msg = '🎉 ' + record.tokenName + ' 全部完成！';
+    onUpdate({...record, checked:newChecked, naSteps:newNA, updatedAt:new Date().toISOString()}, msg);
+  };
+
+  const toggleNA = (idx) => {
+    const nowNA = !naSteps[idx];
+    const newNA = {...naSteps, [idx]: nowNA};
+    const newChecked = nowNA ? {...checked, [idx]:false} : checked;
+    onUpdate({...record, naSteps:newNA, checked:newChecked, updatedAt:new Date().toISOString()},
+      nowNA ? ('— N/A：' + (checklist[idx]?.task||'').slice(0,20)) : '');
+  };
+
+  const saveStepNote = (idx) => {
+    const newNotes = {...stepNotes, [idx]: stepNoteVal.trim()};
+    onUpdate({...record, stepNotes:newNotes, updatedAt:new Date().toISOString()}, '📝 步骤备注已保存');
+    setEditingStepNote(null);
+  };
+
+  const stepFields = record.stepFields || {};
+  const setStepField = (inputKey, value, stepIdx) => {
+    const newFields = {...stepFields, [inputKey]: value};
+    const newChecked = {...checked, [stepIdx]: !!value};
+    onUpdate({...record, stepFields:newFields, checked:newChecked, updatedAt:new Date().toISOString()}, value?`✅ ${inputKey} 已填写`:'');
   };
 
   const openEditModal = () => {
@@ -1623,45 +1679,114 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
               </div>
               {phase.steps.map(step=>{
                 const isDone = !!checked[step.idx];
-                const isExp = !!expandedSteps[step.idx];
+                const isNA   = !isDone && !!(naSteps[step.idx]);
+                const isExp  = !!expandedSteps[step.idx];
                 const hasNote = step.note && step.note.trim();
+                const myNote  = stepNotes[step.idx] || '';
+                const isEditingNote = editingStepNote === step.idx;
+                const bg = isDone ? '#F0FDF4' : isNA ? '#F9FAFB' : 'white';
+                const borderColor = isDone ? '#86EFAC' : isNA ? '#E5E7EB' : step.critical ? '#FCA5A5' : '#E5E7EB';
+                const leftColor   = isDone ? '#22C55E' : isNA ? '#D1D5DB' : step.critical ? '#EF4444' : pc.border;
                 return (
-                  <div key={step.idx} style={{
-                    background: isDone?'#F0FDF4':'white',
-                    border:`1px solid ${isDone?'#86EFAC':step.critical?'#FCA5A5':'#E5E7EB'}`,
-                    borderLeft:`4px solid ${isDone?'#22C55E':step.critical?'#EF4444':pc.border}`,
-                    borderRadius:10, marginBottom:8, overflow:'hidden',
-                    boxShadow:'0 1px 4px rgba(0,0,0,0.04)', transition:'all 0.15s',
-                  }}>
-                    <div style={{display:'flex', alignItems:'flex-start', padding:'12px 14px', gap:12, cursor:'pointer'}}
-                      onClick={()=>toggle(step.idx)}>
-                      <div style={{width:22,height:22,borderRadius:6,border:`2px solid ${isDone?'#22C55E':'#D1D5DB'}`,
-                        background:isDone?'#22C55E':'white',display:'flex',alignItems:'center',justifyContent:'center',
-                        flexShrink:0,marginTop:1,transition:'all 0.15s'}}>
+                  <div key={step.idx} style={{background:bg, border:'1px solid '+borderColor, borderLeft:'4px solid '+leftColor,
+                    borderRadius:10, marginBottom:8, overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', transition:'all 0.15s'}}>
+                    <div style={{display:'flex', alignItems:'flex-start', padding:'11px 14px', gap:10}}>
+                      {/* Done checkbox */}
+                      <div onClick={()=>toggle(step.idx)} style={{width:22,height:22,borderRadius:6,
+                        border:'2px solid '+(isDone?'#22C55E':'#D1D5DB'),
+                        background:isDone?'#22C55E':'white', display:'flex',alignItems:'center',justifyContent:'center',
+                        flexShrink:0, marginTop:2, cursor:'pointer', transition:'all 0.15s'}}>
                         {isDone && <span style={{color:'white',fontSize:13,fontWeight:900}}>✓</span>}
                       </div>
+                      {/* Step info */}
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                          <span style={{fontWeight:700,fontSize:14,color:isDone?'#6B7280':'#111827',textDecoration:isDone?'line-through':'none'}}>
+                          <span style={{fontWeight:700,fontSize:14,
+                            color: isDone?'#6B7280': isNA?'#9CA3AF':'#111827',
+                            textDecoration: isDone||isNA?'line-through':'none'}}>
                             {step.idx+1}. {step.task}
                           </span>
-                          {step.critical && !isDone && <span style={{background:'#FEE2E2',color:'#DC2626',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:99}}>关键</span>}
+                          {isNA && <span style={{background:'#F3F4F6',color:'#9CA3AF',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:99}}>不需要</span>}
+                          {step.critical && !isDone && !isNA && <span style={{background:'#FEE2E2',color:'#DC2626',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:99}}>关键</span>}
                         </div>
-                        <div style={{display:'flex',gap:12,marginTop:5,flexWrap:'wrap'}}>
+                        {/* Text input for inputType=text */}
+                        {step.inputType==='text' && !isNA && (
+                          <div style={{marginTop:6}}>
+                            <input value={stepFields[step.inputKey]||''}
+                              onChange={e=>setStepField(step.inputKey,e.target.value,step.idx)}
+                              onClick={e=>e.stopPropagation()}
+                              placeholder={`输入${step.task}…`}
+                              style={{width:'100%',fontSize:13,border:'1.5px solid '+(stepFields[step.inputKey]?'#86EFAC':'#E5E7EB'),
+                                borderRadius:8,padding:'7px 10px',outline:'none',fontFamily:'inherit',
+                                background:stepFields[step.inputKey]?'#F0FDF4':'white',boxSizing:'border-box'}}/>
+                          </div>
+                        )}
+                        {/* Select for inputType=select */}
+                        {step.inputType==='select' && !isNA && (
+                          <div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap'}}>
+                            {(step.inputOptions||[]).map(opt=>{
+                              const sel = stepFields[step.inputKey]===opt;
+                              return (
+                                <button key={opt} onClick={e=>{e.stopPropagation();setStepField(step.inputKey,sel?'':opt,step.idx);}}
+                                  style={{fontSize:12,padding:'4px 12px',borderRadius:6,cursor:'pointer',
+                                    background:sel?'#1B3A6B':'white',color:sel?'white':'#374151',
+                                    border:`1.5px solid ${sel?'#1B3A6B':'#E5E7EB'}`,fontWeight:sel?700:400}}>
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {!step.inputType && <div style={{display:'flex',gap:12,marginTop:4,flexWrap:'wrap'}}>
                           <span style={{fontSize:12,color:'#4B5563'}}>👤 {step.owner}</span>
                           <span style={{fontSize:12,color:'#2E75B6',fontWeight:600}}>📞 {step.contact}</span>
                           <span style={{fontSize:12,color:'#6B7280'}}>⏱ {step.time}</span>
-                        </div>
+                        </div>}
+                        {/* Per-step note display */}
+                        {myNote && !isEditingNote && (
+                          <div style={{marginTop:6, background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:6,
+                            padding:'5px 10px', fontSize:12, color:'#92400E', display:'flex', gap:6, alignItems:'flex-start'}}>
+                            <span>📌</span><span style={{flex:1}}>{myNote}</span>
+                          </div>
+                        )}
+                        {/* Note editor */}
+                        {isEditingNote && (
+                          <div style={{marginTop:6}}>
+                            <textarea autoFocus value={stepNoteVal} onChange={e=>setStepNoteVal(e.target.value)}
+                              placeholder="填写备注信息，如负责人确认结果、截图说明等..."
+                              rows={2} style={{width:'100%',fontSize:12,border:'1.5px solid #2E75B6',borderRadius:6,
+                                padding:'6px 8px',fontFamily:'inherit',resize:'vertical',outline:'none',boxSizing:'border-box'}}/>
+                            <div style={{display:'flex',gap:6,marginTop:4}}>
+                              <button onClick={()=>saveStepNote(step.idx)} style={{background:C.blue,color:'white',border:'none',borderRadius:6,padding:'4px 12px',fontSize:12,cursor:'pointer',fontWeight:600}}>保存</button>
+                              <button onClick={()=>setEditingStepNote(null)} style={{background:'none',border:'1px solid #E5E7EB',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer',color:'#6B7280'}}>取消</button>
+                              {myNote && <button onClick={()=>{setStepNoteVal('');saveStepNote(step.idx);}} style={{background:'none',border:'1px solid #FCA5A5',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer',color:'#EF4444'}}>清除</button>}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {hasNote && (
-                        <button onClick={e=>{e.stopPropagation();setExpandedSteps(p=>({...p,[step.idx]:!p[step.idx]}));}}
-                          style={{background:'none',border:'none',cursor:'pointer',fontSize:16,color:'#9CA3AF',flexShrink:0,padding:'0 4px'}}>
-                          {isExp?'▲':'▼'}
-                        </button>
-                      )}
+                      {/* Action buttons: N/A + Note + Expand */}
+                      <div style={{display:'flex',gap:4,flexShrink:0,alignItems:'center',marginTop:2}}>
+                        <button onClick={e=>{e.stopPropagation();toggleNA(step.idx);}}
+                          title="标记为不需要"
+                          style={{fontSize:11,fontWeight:600,padding:'3px 7px',borderRadius:5,cursor:'pointer',
+                            background:isNA?'#F3F4F6':'none', color:isNA?'#6B7280':'#D1D5DB',
+                            border:'1px solid '+(isNA?'#D1D5DB':'#E5E7EB'),
+                            transition:'all 0.15s'}}>N/A</button>
+                        <button onClick={e=>{e.stopPropagation();setEditingStepNote(isEditingNote?null:step.idx);setStepNoteVal(myNote);}}
+                          title="添加备注信息"
+                          style={{fontSize:12,padding:'3px 6px',borderRadius:5,cursor:'pointer',
+                            background:myNote?'#FFFBEB':'none', color:myNote?'#D97706':'#D1D5DB',
+                            border:'1px solid '+(myNote?'#FDE68A':'#E5E7EB')}}>📝</button>
+                        {hasNote && (
+                          <button onClick={e=>{e.stopPropagation();setExpandedSteps(p=>({...p,[step.idx]:!p[step.idx]}));}}
+                            style={{background:'none',border:'1px solid #E5E7EB',cursor:'pointer',fontSize:13,color:'#9CA3AF',padding:'3px 5px',borderRadius:5}}>
+                            {isExp?'▲':'▼'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                     {hasNote && isExp && (
-                      <div style={{background:'#F8FAFC',borderTop:'1px solid #E5E7EB',padding:'10px 14px 10px 50px'}}>
+                      <div style={{background:'#F8FAFC',borderTop:'1px solid #E5E7EB',padding:'10px 14px 10px 48px'}}>
                         {step.note.split('\n').map((l,i)=>(
                           <div key={i} style={{fontSize:12,color:'#4B5563',lineHeight:1.6}}>{l}</div>
                         ))}
@@ -1771,11 +1896,1046 @@ function CompletedTable({ records, onBack }) {
   );
 }
 
+// ─── Overview Table ───────────────────────────────────────────────────────────
+// ─── Phase checkbox component ─────────────────────────────────────────────────
+function PhaseCheckbox({ done, partial, onClick, tip }) {
+  return (
+    <div onClick={onClick} title={tip} style={{
+      width:18, height:18, borderRadius:4, margin:'0 auto', cursor:'pointer', flexShrink:0,
+      border: done ? 'none' : ('1.5px solid ' + (partial ? '#2E75B6' : '#D1D5DB')),
+      background: done ? '#059669' : (partial ? '#EBF4FB' : 'white'),
+      display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s',
+    }}>
+      {done && <span style={{color:'white', fontSize:10, fontWeight:900}}>✓</span>}
+      {partial && !done && <div style={{width:7, height:2, background:'#2E75B6', borderRadius:1}}/>}
+    </div>
+  );
+}
+
+// ─── Working days helper ──────────────────────────────────────────────────────
+function workingDaysUntil(isoDate) {
+  if (!isoDate) return 999;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(isoDate); target.setHours(0,0,0,0);
+  if (target <= today) return -1;
+  let count = 0; const cur = new Date(today);
+  while (cur < target) {
+    cur.setDate(cur.getDate()+1);
+    const d = cur.getDay();
+    if (d!==0 && d!==6) count++;
+  }
+  return count;
+}
+
+// ─── Detail Panel ─────────────────────────────────────────────────────────────
+function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPhase }) {
+  const checklist = useMemo(()=>buildChecklist(record.site,record.product,record.tokenType,{stableHub:record.stableHub,launchpool:record.launchpool}),[record]);
+  const [collapsedPhases, setCollapsedPhases] = useState({});
+  const [editingStepNote, setEditingStepNote] = useState(null);
+  const [stepNoteVal, setStepNoteVal] = useState('');
+  const [showCopyMenu, setShowCopyMenu] = useState(false);
+  const phaseRefs = React.useRef({});
+
+  // Scroll to phase when triggered from table
+  useEffect(()=>{
+    if (!scrollToPhase) return;
+    setCollapsedPhases(prev=>({...prev,[scrollToPhase]:false}));
+    setTimeout(()=>{
+      const el = phaseRefs.current[scrollToPhase];
+      if (el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    }, 80);
+  },[scrollToPhase]);
+
+  const checked   = record.checked   || {};
+  const naSteps   = record.naSteps   || {};
+  const stepNotes = record.stepNotes || {};
+  const total = checklist.length;
+  const done  = countDone(checked, naSteps);
+  const pct   = total ? Math.round(done/total*100) : 0;
+  const isCancelled = !!record.cancelled;
+
+  const toggle = (idx) => {
+    const nowDone = !checked[idx];
+    const newChecked = {...checked, [idx]: nowDone};
+    const newNA = nowDone ? {...naSteps, [idx]:false} : naSteps;
+    onUpdate({...record, checked:newChecked, naSteps:newNA, updatedAt:new Date().toISOString()});
+  };
+  const toggleNA = (idx) => {
+    const nowNA = !naSteps[idx];
+    const newNA = {...naSteps, [idx]: nowNA};
+    const newChecked = nowNA ? {...checked, [idx]:false} : checked;
+    onUpdate({...record, naSteps:newNA, checked:newChecked, updatedAt:new Date().toISOString()});
+  };
+  const saveStepNote = (idx) => {
+    onUpdate({...record, stepNotes:{...stepNotes,[idx]:stepNoteVal.trim()}, updatedAt:new Date().toISOString()});
+    setEditingStepNote(null);
+  };
+  const stepFields = record.stepFields || {};
+  const setStepField = (inputKey, value, stepIdx) => {
+    const newFields = {...stepFields, [inputKey]: value};
+    const newChecked = {...checked, [stepIdx]: !!value};
+    onUpdate({...record, stepFields:newFields, checked:newChecked, updatedAt:new Date().toISOString()});
+  };
+
+  // Group by phase
+  const phases = [];
+  let curPh = null;
+  checklist.forEach((step,i)=>{
+    if (!curPh || curPh.name!==step.phase) { curPh={name:step.phase,tag:step.tag,steps:[]}; phases.push(curPh); }
+    curPh.steps.push({...step,idx:i});
+  });
+
+  const SSITE = {HK:{bg:'#D6E4F0',color:'#1B3A6B'},Global:{bg:'#D4EFEC',color:'#1A7A6E'},ID:{bg:'#EAD9F7',color:'#6A3D8F'},SG:{bg:'#DCFCE7',color:'#166534'}};
+  const ss = SSITE[record.site]||{bg:'#F3F4F6',color:'#374151'};
+  const siteInfo = SITES.find(s=>s.id===record.site);
+
+  return (
+    <div style={{width:400,flexShrink:0,borderLeft:'2px solid #E5E7EB',display:'flex',flexDirection:'column',background:'white',overflow:'hidden'}}>
+      <style>{`@keyframes slideInPanel{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}.panel-step:hover{background:#F8FAFC!important}`}</style>
+
+      {/* Header */}
+      <div style={{padding:'12px 14px 10px',borderBottom:'1px solid #E5E7EB',flexShrink:0,background:ss.bg}}>
+        <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:5}}>
+          <div style={{flex:1,fontWeight:800,fontSize:15,color:ss.color,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+            title={record.tokenName}>{record.tokenName}</div>
+          {/* Copy button + menu */}
+          {onCopy && (
+            <div style={{position:'relative'}}>
+              <button onClick={()=>setShowCopyMenu(v=>!v)} title="复制到其他站点"
+                style={{background:'rgba(0,0,0,0.08)',border:'none',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:11,color:ss.color,fontWeight:700,whiteSpace:'nowrap'}}>
+                📋
+              </button>
+              {showCopyMenu && (
+                <div style={{position:'absolute',top:'calc(100% + 4px)',right:0,zIndex:300,background:'white',
+                  border:'1px solid #E5E7EB',borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,0.14)',minWidth:170}}
+                  onClick={e=>e.stopPropagation()}>
+                  <div style={{padding:'8px 12px 5px',fontSize:11,color:'#9CA3AF',fontWeight:700}}>复制到站点</div>
+                  {SITES.filter(s=>s.id!==record.site).map(s=>(
+                    <div key={s.id} onClick={()=>{onCopy(record,s.id);setShowCopyMenu(false);}}
+                      style={{padding:'8px 14px',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,color:'#374151'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='#F3F4F6'}
+                      onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                      <span>{s.icon}</span><span>{s.label}</span>
+                    </div>
+                  ))}
+                  <div onClick={()=>{onCopy(record,record.site);setShowCopyMenu(false);}}
+                    style={{padding:'8px 14px',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,
+                      color:'#374151',borderTop:'1px solid #F3F4F6'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='#F3F4F6'}
+                    onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                    <span>📋</span><span>复制到同站点</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <button onClick={()=>onOpenFull(record.id)} title="打开完整视图"
+            style={{background:'rgba(0,0,0,0.08)',border:'none',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:11,color:ss.color,fontWeight:700,whiteSpace:'nowrap'}}>
+            ↗ 完整
+          </button>
+          <button onClick={onClose}
+            style={{background:'rgba(0,0,0,0.08)',border:'none',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:14,color:ss.color,fontWeight:800,lineHeight:1}}>
+            ✕
+          </button>
+        </div>
+        <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+          <span style={{background:'rgba(255,255,255,0.6)',color:ss.color,fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:99}}>
+            {siteInfo?.icon} {record.site}
+          </span>
+          <span style={{background:'rgba(255,255,255,0.5)',color:'#374151',fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:99}}>
+            {record.product}{record.stableHub?' +SH':''}{record.launchpool?' +LP':''}
+          </span>
+          {isCancelled && <span style={{background:'rgba(0,0,0,0.1)',color:'#6B7280',fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:99}}>已取消</span>}
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div style={{padding:'9px 14px',borderBottom:'1px solid #F0F0F0',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+          <div style={{flex:1,background:'#E5E7EB',borderRadius:99,height:6,overflow:'hidden'}}>
+            <div style={{width:`${pct}%`,height:'100%',background:pct===100?'#059669':C.blue,borderRadius:99,transition:'width 0.3s'}}/>
+          </div>
+          <span style={{fontSize:12,fontWeight:700,color:pct===100?'#059669':C.navy,whiteSpace:'nowrap'}}>{done}/{total}</span>
+          <span style={{fontSize:11,color:'#9CA3AF'}}>{pct}%</span>
+        </div>
+        {record.blocker && (
+          <div style={{background:'#FEF3C7',borderRadius:5,padding:'4px 9px',fontSize:11,color:'#92400E'}}>🚧 {record.blocker}</div>
+        )}
+      </div>
+
+      {/* Phase steps - scrollable */}
+      <div style={{flex:1,overflowY:'auto',padding:'4px 0',animation:'slideInPanel 0.18s ease'}}>
+        {phases.map(ph=>{
+          const phDone = ph.steps.filter(s=>checked[s.idx]||naSteps[s.idx]).length;
+          const phColor = PHASE_COLORS[ph.tag]||{border:'#9CA3AF',bg:'#F9FAFB',label:ph.name};
+          const isCollapsed = !!collapsedPhases[ph.tag];
+          return (
+            <div key={ph.name} ref={el=>phaseRefs.current[ph.tag]=el}>
+              {/* Phase header */}
+              <div onClick={()=>setCollapsedPhases(prev=>({...prev,[ph.tag]:!prev[ph.tag]}))}
+                style={{display:'flex',alignItems:'center',gap:8,padding:'6px 14px',cursor:'pointer',
+                  background:phColor.bg,borderLeft:`3px solid ${phColor.border}`,userSelect:'none'}}>
+                <span style={{fontSize:11,fontWeight:700,color:phColor.border,flex:1}}>{ph.name}</span>
+                <span style={{fontSize:11,color:phDone===ph.steps.length&&ph.steps.length>0?'#059669':phColor.border,fontWeight:600}}>{phDone}/{ph.steps.length}</span>
+                <span style={{fontSize:9,color:phColor.border,opacity:0.7}}>{isCollapsed?'▶':'▼'}</span>
+              </div>
+              {/* Steps */}
+              {!isCollapsed && ph.steps.map(step=>{
+                const isDone  = !!checked[step.idx];
+                const isNA    = !!naSteps[step.idx];
+                const hasNote = !!stepNotes[step.idx];
+                const isEditN = editingStepNote===step.idx;
+                const fieldVal = step.inputKey ? (stepFields[step.inputKey]||'') : '';
+                return (
+                  <div key={step.idx} className="panel-step"
+                    style={{borderBottom:'1px solid #F9FAFB',background:isDone?'#F0FDF4':isNA?'#FAFAFA':'white',opacity:isCancelled?0.6:1}}>
+                    <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 14px'}}>
+                      {/* Done checkbox */}
+                      <div onClick={()=>!isCancelled&&toggle(step.idx)}
+                        style={{width:17,height:17,borderRadius:4,flexShrink:0,cursor:isCancelled?'default':'pointer',
+                          border:isDone?'none':'1.5px solid #D1D5DB',background:isDone?'#059669':'white',
+                          display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        {isDone && <span style={{color:'white',fontSize:10,lineHeight:1}}>✓</span>}
+                      </div>
+                      {/* Task */}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,color:isDone?'#6B7280':isNA?'#9CA3AF':'#111827',
+                          textDecoration:isNA?'line-through':'none',
+                          fontWeight:step.critical&&!isDone&&!isNA?600:400,
+                          lineHeight:'1.35', marginBottom: step.inputType?3:0}}
+                          title={step.task}>
+                          {step.critical&&!isDone&&!isNA&&<span style={{color:'#DC2626',marginRight:3}}>*</span>}
+                          {step.task}
+                        </div>
+                        {/* Text input field */}
+                        {step.inputType==='text' && !isNA && (
+                          <input value={fieldVal}
+                            onChange={e=>!isCancelled&&setStepField(step.inputKey,e.target.value,step.idx)}
+                            onClick={e=>e.stopPropagation()}
+                            placeholder={`输入${step.task}…`}
+                            style={{width:'100%',fontSize:11,border:'1px solid '+(fieldVal?'#86EFAC':'#E5E7EB'),
+                              borderRadius:5,padding:'3px 8px',outline:'none',fontFamily:'inherit',
+                              boxSizing:'border-box',background:fieldVal?'#F0FDF4':'white',color:'#111827'}}/>
+                        )}
+                        {/* Select field */}
+                        {step.inputType==='select' && !isNA && (
+                          <div style={{display:'flex',gap:3,flexWrap:'wrap',marginTop:2}}>
+                            {(step.inputOptions||[]).map(opt=>(
+                              <button key={opt} onClick={e=>{e.stopPropagation();!isCancelled&&setStepField(step.inputKey,fieldVal===opt?'':opt,step.idx);}}
+                                style={{fontSize:10,padding:'2px 8px',borderRadius:4,cursor:isCancelled?'default':'pointer',
+                                  background:fieldVal===opt?'#1B3A6B':step.inputType?'#F3F4F6':'#F3F4F6',
+                                  color:fieldVal===opt?'white':'#374151',
+                                  border:fieldVal===opt?'none':'1px solid #E5E7EB',
+                                  fontWeight:fieldVal===opt?700:400}}>{opt}</button>
+                            ))}
+                          </div>
+                        )}
+                        {step.owner&&!step.inputType&&<div style={{fontSize:10,color:'#9CA3AF',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{step.owner}</div>}
+                      </div>
+                      {/* N/A */}
+                      <button onClick={e=>{e.stopPropagation();!isCancelled&&toggleNA(step.idx);}}
+                        style={{background:isNA?'#E5E7EB':'transparent',border:isNA?'none':'1px solid #E5E7EB',
+                          borderRadius:4,padding:'2px 5px',fontSize:10,cursor:isCancelled?'default':'pointer',
+                          color:isNA?'#374151':'#9CA3AF',fontWeight:isNA?700:400,flexShrink:0}}>
+                        N/A
+                      </button>
+                      {/* Note */}
+                      <button onClick={e=>{e.stopPropagation();setEditingStepNote(isEditN?null:step.idx);setStepNoteVal(stepNotes[step.idx]||'');}}
+                        style={{background:hasNote?'#FEF3C7':'transparent',border:hasNote?'1px solid #FDE68A':'1px solid #E5E7EB',
+                          borderRadius:4,padding:'2px 5px',fontSize:10,cursor:'pointer',
+                          color:hasNote?'#92400E':'#9CA3AF',flexShrink:0}}>
+                        📝
+                      </button>
+                    </div>
+                    {/* Note editor */}
+                    {isEditN && (
+                      <div style={{padding:'4px 14px 8px 38px',background:'#FFFBEB'}}>
+                        <input autoFocus value={stepNoteVal} onChange={e=>setStepNoteVal(e.target.value)}
+                          onKeyDown={e=>{if(e.key==='Enter')saveStepNote(step.idx);if(e.key==='Escape')setEditingStepNote(null);}}
+                          placeholder="添加备注..."
+                          style={{width:'100%',fontSize:11,border:'1px solid #FDE68A',borderRadius:5,padding:'4px 8px',outline:'none',fontFamily:'inherit',boxSizing:'border-box'}}/>
+                        <div style={{display:'flex',gap:4,marginTop:4}}>
+                          <button onClick={()=>saveStepNote(step.idx)} style={{background:C.blue,color:'white',border:'none',borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontWeight:600}}>保存</button>
+                          <button onClick={()=>setEditingStepNote(null)} style={{background:'none',border:'1px solid #E5E7EB',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',color:'#6B7280'}}>取消</button>
+                        </div>
+                      </div>
+                    )}
+                    {/* Saved note */}
+                    {!isEditN&&hasNote&&(
+                      <div style={{padding:'2px 14px 5px 38px',fontSize:10,color:'#92400E',background:'#FFFBEB'}}>📌 {stepNotes[step.idx]}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, onRestore, onCopy, siteFilter }) {
+  const [editingCell, setEditingCell] = useState(null); // {id, field}
+  const [cellVal, setCellVal] = useState('');
+  const [searchQ, setSearchQ] = useState('');
+  const [panelId, setPanelId] = useState(null);
+  const [panelPhase, setPanelPhase] = useState(null);
+  const [tableSearch, setTableSearch] = useState('');
+  const [statusFilt, setStatusFilt] = useState('all');
+  const panelRecord = panelId ? records.find(r=>r.id===panelId) : null;
+
+  // Dropdown data
+  const QUOTE_OPTIONS_ALL = ['USD','USDT','USDC','BTC','HKD','IDR','USDGO','RLUSD','AUSD','不涉及'];
+  const CHAIN_OPTIONS = ['ERC20','BTC','TRC20','BEP20','Solana','Polygon','Avalanche','Arbitrum','Base','TON','XRP Ledger','Morph','ERC20/SOL','PLUME & ERC20','POL','BSC','Cardano','Injective','Toncoin','Litecoin','Sui','不上链'];
+  const SITE_OPTIONS = [
+    {id:'HK',     label:'OSL HK',    icon:'🇭🇰', bg:'#D6E4F0', color:'#1B3A6B'},
+    {id:'Global', label:'Global',    icon:'🌐', bg:'#D4EFEC', color:'#1A7A6E'},
+    {id:'ID',     label:'OSL ID',    icon:'🇮🇩', bg:'#EAD9F7', color:'#6A3D8F'},
+    {id:'SG',     label:'SG',        icon:'🇸🇬', bg:'#DCFCE7', color:'#166534'},
+  ];
+  const PRODUCT_OPTIONS = ['Orderbook','RFQ','OTC','仅上链','StableHub','Launchpool','下币','理财代币-3CP','理财代币-托管类','WealthToken'];
+
+  const SS = {
+    in_progress: { bg:'#FEF3C7', color:'#D97706', label:'进行中' },
+    not_started: { bg:'#F3F4F6', color:'#6B7280', label:'未开始' },
+    completed:   { bg:'#D1FAE5', color:'#059669', label:'已完成' },
+    cancelled:   { bg:'#F3F4F6', color:'#9CA3AF', label:'已取消' },
+  };
+  const SITE_S = { HK:{bg:'#D6E4F0',color:'#1B3A6B'}, Global:{bg:'#D4EFEC',color:'#1A7A6E'}, ID:{bg:'#EAD9F7',color:'#6A3D8F'}, SG:{bg:'#DCFCE7',color:'#166534'} };
+  const USER_TYPES = ['PI（专业投资者）','零售 Retail','两者','不适用'];
+
+  const save = (r, patch) => onUpdate({...r, ...patch, updatedAt:new Date().toISOString()});
+  const stopEdit = () => setEditingCell(null);
+
+  const STATUS_RANK = { in_progress:0, not_started:1, completed:2, cancelled:3 };
+  const allRows = records
+    .filter(r => !siteFilter || r.site===siteFilter)
+    .filter(r => {
+      if (!tableSearch) return true;
+      const q = tableSearch.toLowerCase();
+      return (r.tokenName||'').toLowerCase().includes(q)
+          || (r.tokenSymbol||'').toLowerCase().includes(q)
+          || (r.blocker||'').toLowerCase().includes(q)
+          || (r.chainRaw||'').toLowerCase().includes(q);
+    })
+    .filter(r => {
+      if (statusFilt==='all') return true;
+      const cl = buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool});
+      return getRecordStatus(r,cl.length)===statusFilt;
+    })
+    .sort((a,b) => {
+      const clA = buildChecklist(a.site,a.product,a.tokenType,{stableHub:a.stableHub,launchpool:a.launchpool});
+      const clB = buildChecklist(b.site,b.product,b.tokenType,{stableHub:b.stableHub,launchpool:b.launchpool});
+      const rA = STATUS_RANK[getRecordStatus(a,clA.length)]??99;
+      const rB = STATUS_RANK[getRecordStatus(b,clB.length)]??99;
+      if (rA !== rB) return rA - rB;
+      // Within same status: sort by expectedLaunchTime asc (nulls last)
+      const ta = a.expectedLaunchTime ? new Date(a.expectedLaunchTime) : null;
+      const tb = b.expectedLaunchTime ? new Date(b.expectedLaunchTime) : null;
+      if (ta && tb) return ta - tb;
+      if (ta) return -1;
+      if (tb) return 1;
+      return new Date(b.updatedAt)-new Date(a.updatedAt);
+    });
+
+  // Split into upcoming (≤7 working days, not completed/cancelled) and rest
+  const upcoming = allRows.filter(r => {
+    const st = getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}).length);
+    if (st==='completed'||st==='cancelled') return false;
+    return workingDaysUntil(r.expectedLaunchTime) >= 0 && workingDaysUntil(r.expectedLaunchTime) <= 7;
+  });
+  const rest = allRows.filter(r => !upcoming.find(u=>u.id===r.id));
+
+  const PHASE_COLS = [
+    { key:'pre',        label:'前置', phaseName:'前置确认' },
+    { key:'bd',         label:'BD',   phaseName:'业务评估' },
+    { key:'compliance', label:'合规',  phaseName:'合规/VAAP' },
+    { key:'exec',       label:'执行',  phaseName:'执行配置' },
+    { key:'launch',     label:'上线',  phaseName:'正式上线' },
+  ];
+
+  const COLS = siteFilter
+    ? ['#','项目名称','备注/卡点','区块链','状态','交易对','交易类型','用户类型','预计上线时间','进度','前置','BD','合规','执行','上线']
+    : ['#','项目名称','备注/卡点','区块链','状态','交易对','站点','交易类型','用户类型','预计上线时间','进度'];
+  const colN = COLS.length;
+
+  const CellEdit = ({r, field, children}) => {
+    const isEditing = editingCell?.id===r.id && editingCell?.field===field;
+    return (
+      <td style={{padding:0, position:'relative', maxWidth: field==='blocker'?160:field==='tokenName'?180:field==='quoteCurrencies'?150:120}}
+        onClick={e=>{e.stopPropagation();if(!isEditing){setEditingCell({id:r.id,field});setSearchQ('');setCellVal(
+          field==='blocker'?r.blocker||'':
+          field==='userType'?r.userType||'':
+          field==='expectedLaunchTime'?toInputVal(r.expectedLaunchTime):
+          field==='quoteCurrencies'?JSON.stringify(r.quoteCurrencies||[]):
+          field==='status'?getRecordStatus(r,buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}).length):
+          '');}
+        }}>
+        <div style={{padding:'8px 10px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+          minHeight:36, display:'flex', alignItems:'center',
+          background: isEditing?'#EBF4FB':'transparent',
+          outline: isEditing?'2px solid #2E75B6':'none', outlineOffset:-2,
+          cursor:'default',
+        }}>
+          {children}
+          {!isEditing && <span style={{marginLeft:'auto', opacity:0, fontSize:10, color:'#9CA3AF'}} className="edit-icon">✏</span>}
+        </div>
+        {/* Inline editor */}
+        {isEditing && (
+          <div style={{position:'absolute', top:'100%', left:0, zIndex:200, background:'white',
+            border:'1px solid #E5E7EB', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,0.14)',
+            minWidth:180, maxWidth:280}}
+            onClick={e=>e.stopPropagation()}>
+
+            {/* ── 备注/卡点 ── */}
+            {field==='blocker' && (
+              <div style={{padding:8}}>
+                <input autoFocus value={cellVal} onChange={e=>setCellVal(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'){save(r,{blocker:cellVal.trim()});stopEdit();}if(e.key==='Escape')stopEdit();}}
+                  placeholder="添加备注/卡点..."
+                  style={{width:'100%',fontSize:12,border:'1.5px solid #2E75B6',borderRadius:6,padding:'6px 8px',outline:'none',fontFamily:'inherit',boxSizing:'border-box'}}/>
+                <div style={{display:'flex',gap:4,marginTop:6}}>
+                  <button onClick={()=>{save(r,{blocker:cellVal.trim()});stopEdit();}} style={{flex:1,background:C.blue,color:'white',border:'none',borderRadius:6,padding:'5px 0',fontSize:12,cursor:'pointer',fontWeight:600}}>保存</button>
+                  <button onClick={stopEdit} style={{flex:1,background:'none',border:'1px solid #E5E7EB',borderRadius:6,padding:'5px 0',fontSize:12,cursor:'pointer',color:'#6B7280'}}>取消</button>
+                </div>
+              </div>
+            )}
+
+            {/* ── 区块链 (searchable + creatable) ── */}
+            {field==='chainRaw' && (() => {
+              const cur = r.chainRaw||(r.chainLabels||[]).join('/');
+              const filtered = CHAIN_OPTIONS.filter(c=>c.toLowerCase().includes(searchQ.toLowerCase()));
+              const canCreate = searchQ.trim() && !CHAIN_OPTIONS.includes(searchQ.trim());
+              return (
+                <div>
+                  <div style={{padding:'6px 8px',borderBottom:'1px solid #F3F4F6'}}>
+                    <input autoFocus value={searchQ} onChange={e=>setSearchQ(e.target.value)}
+                      placeholder="查找或创建选项"
+                      style={{width:'100%',fontSize:12,border:'none',outline:'none',fontFamily:'inherit',background:'transparent',boxSizing:'border-box'}}/>
+                  </div>
+                  <div style={{maxHeight:220,overflowY:'auto'}}>
+                    {canCreate && (
+                      <div onClick={()=>{save(r,{chainRaw:searchQ.trim(),chainLabels:[searchQ.trim()]});setSearchQ('');stopEdit();}}
+                        style={{padding:'8px 12px',fontSize:12,cursor:'pointer',color:C.blue,fontWeight:600,borderBottom:'1px solid #F3F4F6'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#EBF4FB'}
+                        onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                        + 创建"{searchQ.trim()}"
+                      </div>
+                    )}
+                    {filtered.map(c=>(
+                      <div key={c} onClick={()=>{save(r,{chainRaw:c,chainLabels:[c]});setSearchQ('');stopEdit();}}
+                        style={{padding:'8px 12px',fontSize:12,cursor:'pointer',fontWeight:cur===c?700:400,
+                          color:cur===c?C.navy:'#374151',background:cur===c?'#EBF4FB':'white'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#F3F4F6'}
+                        onMouseLeave={e=>e.currentTarget.style.background=cur===c?'#EBF4FB':'white'}>
+                        {cur===c&&'✓ '}{c}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── 交易对 (searchable multi-select) ── */}
+            {field==='quoteCurrencies' && (() => {
+              const sel = r.quoteCurrencies||[];
+              const filtered = QUOTE_OPTIONS_ALL.filter(q=>q.toLowerCase().includes(searchQ.toLowerCase()));
+              const canCreate = searchQ.trim() && !QUOTE_OPTIONS_ALL.includes(searchQ.trim()) && !sel.includes(searchQ.trim());
+              const toggle = (q)=>{
+                const next = sel.includes(q)?sel.filter(x=>x!==q):[...sel,q];
+                const sym = r.tokenSymbol||(r.tokenName||'').split('/')[0]||'';
+                save(r,{quoteCurrencies:next, tokenName:next.filter(q=>q!=='不涉及').length>0?next.filter(q=>q!=='不涉及').map(x=>`${sym}/${x}`).join(', '):sym});
+              };
+              return (
+                <div>
+                  <div style={{padding:'6px 8px',borderBottom:'1px solid #F3F4F6',display:'flex',flexWrap:'wrap',gap:4}}>
+                    {sel.map(q=>(
+                      <span key={q} style={{background:'#EFF6FF',color:'#1D4ED8',fontSize:11,fontWeight:600,padding:'2px 7px',borderRadius:99,display:'flex',alignItems:'center',gap:3}}>
+                        {q}<span style={{cursor:'pointer',fontSize:13,lineHeight:1}} onClick={e=>{e.stopPropagation();toggle(q);}}>×</span>
+                      </span>
+                    ))}
+                    <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} autoFocus={sel.length===0}
+                      placeholder="查找或创建"
+                      style={{border:'none',outline:'none',fontSize:12,fontFamily:'inherit',minWidth:80,flex:1}}/>
+                  </div>
+                  <div style={{maxHeight:200,overflowY:'auto'}}>
+                    {canCreate && (
+                      <div onClick={()=>{toggle(searchQ.trim());setSearchQ('');}}
+                        style={{padding:'8px 12px',fontSize:12,cursor:'pointer',color:C.blue,fontWeight:600}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#EBF4FB'}
+                        onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                        + 创建"{searchQ.trim()}"
+                      </div>
+                    )}
+                    {filtered.map(q=>{
+                      const s=sel.includes(q);
+                      return (
+                        <div key={q} onClick={()=>toggle(q)}
+                          style={{padding:'8px 12px',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,
+                            background:s?'#EFF6FF':'white',color:s?'#1D4ED8':'#374151',fontWeight:s?700:400}}
+                          onMouseEnter={e=>e.currentTarget.style.background=s?'#DBEAFE':'#F3F4F6'}
+                          onMouseLeave={e=>e.currentTarget.style.background=s?'#EFF6FF':'white'}>
+                          <span style={{width:14,height:14,borderRadius:3,border:`1.5px solid ${s?'#1D4ED8':'#D1D5DB'}`,
+                            background:s?'#1D4ED8':'white',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                            {s&&<span style={{color:'white',fontSize:9,fontWeight:900}}>✓</span>}
+                          </span>
+                          {q}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── 站点 ── */}
+            {field==='site' && (
+              <div>
+                {SITE_OPTIONS.map(s=>(
+                  <div key={s.id} onClick={()=>{save(r,{site:s.id});stopEdit();}}
+                    style={{padding:'8px 12px',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,
+                      background:r.site===s.id?'#EBF4FB':'white'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='#F3F4F6'}
+                    onMouseLeave={e=>e.currentTarget.style.background=r.site===s.id?'#EBF4FB':'white'}>
+                    <span>{s.icon}</span>
+                    <span style={{fontWeight:r.site===s.id?700:400,color:r.site===s.id?s.color:'#374151'}}>{s.label}</span>
+                    {r.site===s.id&&<span style={{marginLeft:'auto',color:s.color}}>✓</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── 交易类型 ── */}
+            {field==='productDisplay' && (() => {
+              const cur = r.productDisplay||r.product||'';
+              const filtered = PRODUCT_OPTIONS.filter(p=>p.toLowerCase().includes(searchQ.toLowerCase()));
+              const canCreate = searchQ.trim() && !PRODUCT_OPTIONS.includes(searchQ.trim());
+              return (
+                <div>
+                  <div style={{padding:'6px 8px',borderBottom:'1px solid #F3F4F6'}}>
+                    <input autoFocus value={searchQ} onChange={e=>setSearchQ(e.target.value)}
+                      placeholder="查找或创建选项"
+                      style={{width:'100%',fontSize:12,border:'none',outline:'none',fontFamily:'inherit',background:'transparent'}}/>
+                  </div>
+                  <div style={{maxHeight:240,overflowY:'auto'}}>
+                    {canCreate && (
+                      <div onClick={()=>{save(r,{productDisplay:searchQ.trim()});setSearchQ('');stopEdit();}}
+                        style={{padding:'8px 12px',fontSize:12,cursor:'pointer',color:C.blue,fontWeight:600,borderBottom:'1px solid #F3F4F6'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#EBF4FB'}
+                        onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                        + 创建"{searchQ.trim()}"
+                      </div>
+                    )}
+                    {filtered.map(p=>(
+                      <div key={p} onClick={()=>{save(r,{productDisplay:p});setSearchQ('');stopEdit();}}
+                        style={{padding:'8px 12px',fontSize:12,cursor:'pointer',fontWeight:cur===p?700:400,
+                          color:cur===p?C.navy:'#374151',background:cur===p?'#EBF4FB':'white'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#F3F4F6'}
+                        onMouseLeave={e=>e.currentTarget.style.background=cur===p?'#EBF4FB':'white'}>
+                        {cur===p&&'✓ '}{p}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── 用户类型 ── */}
+            {field==='userType' && (
+              <div>
+                {USER_TYPES.map(opt=>(
+                  <div key={opt} onClick={()=>{save(r,{userType:opt});stopEdit();}}
+                    style={{padding:'8px 12px',fontSize:12,cursor:'pointer',borderRadius:5,
+                      background:r.userType===opt?'#EBF4FB':'white',color:r.userType===opt?C.navy:'#374151',fontWeight:r.userType===opt?700:400}}
+                    onMouseEnter={e=>e.currentTarget.style.background='#F3F4F6'}
+                    onMouseLeave={e=>e.currentTarget.style.background=r.userType===opt?'#EBF4FB':'white'}>
+                    {opt}
+                  </div>
+                ))}
+                <div onClick={()=>{save(r,{userType:''});stopEdit();}}
+                  style={{padding:'8px 12px',fontSize:12,cursor:'pointer',color:'#9CA3AF',borderTop:'1px solid #F3F4F6'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='#F3F4F6'}
+                  onMouseLeave={e=>e.currentTarget.style.background='white'}>— 清除</div>
+              </div>
+            )}
+
+            {/* ── 预计上线时间 ── */}
+            {field==='expectedLaunchTime' && (
+              <div style={{padding:8}}>
+                <input type="datetime-local" autoFocus value={cellVal} onChange={e=>setCellVal(e.target.value)} step="3600"
+                  style={{width:'100%',fontSize:12,border:'1.5px solid #2E75B6',borderRadius:6,padding:'5px',outline:'none',boxSizing:'border-box'}}/>
+                <div style={{display:'flex',gap:4,marginTop:6}}>
+                  <button onClick={()=>{save(r,{expectedLaunchTime:cellVal?new Date(cellVal).toISOString():null});stopEdit();}}
+                    style={{flex:1,background:C.blue,color:'white',border:'none',borderRadius:6,padding:'5px 0',fontSize:12,cursor:'pointer',fontWeight:600}}>保存</button>
+                  <button onClick={stopEdit} style={{flex:1,background:'none',border:'1px solid #E5E7EB',borderRadius:6,padding:'5px 0',fontSize:12,cursor:'pointer',color:'#6B7280'}}>取消</button>
+                </div>
+              </div>
+            )}
+
+            {/* ── 状态 ── */}
+            {field==='status' && (
+              <div>
+                <div style={{padding:'6px 12px 4px',fontSize:11,color:'#9CA3AF',fontWeight:600}}>切换状态</div>
+                {[{v:false,l:'进行中/未开始',ic:'🔄'},{v:true,l:'标记为取消',ic:'⏸'}].map(({v,l,ic})=>(
+                  <div key={l} onClick={()=>{save(r,{cancelled:v,cancelReason:v?'手动标记取消':''});stopEdit();}}
+                    style={{padding:'8px 12px',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,color:'#374151'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='#F3F4F6'}
+                    onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                    <span>{ic}</span>{l}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </td>
+    );
+  };
+
+  const RowRender = ({r, idx, isUpcoming}) => {
+    const cl = buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool});
+    const done = countDone(r.checked, r.naSteps);
+    const pct = cl.length?Math.round(done/cl.length*100):0;
+    const status = getRecordStatus(r, cl.length);
+    const ss = SS[status]||SS.not_started;
+    const siteS = SITE_S[r.site]||{bg:'#F3F4F6',color:'#374151'};
+    const siteInfo = SITES.find(s=>s.id===r.site);
+    const isCancelled = status==='cancelled';
+    const wdays = workingDaysUntil(r.expectedLaunchTime);
+    const isSelected = panelId === r.id;
+    return (
+      <tr key={r.id}
+        style={{borderBottom:'1px solid #F0F0F0', opacity:isCancelled?0.45:1,
+          background: isSelected?'#EBF4FB': isUpcoming?'#FFFBEB': idx%2===0?'white':'#FAFAFA',
+          outline: isSelected?'2px solid #2E75B6 inset':'none'}}
+        onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background=isUpcoming?'#FEF3C7':'#F0F7FF';}}
+        onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background=isUpcoming?'#FFFBEB':idx%2===0?'white':'#FAFAFA';}}>
+        {/* # */}
+        <td style={{padding:'8px', textAlign:'center', color:'#9CA3AF', fontSize:11, width:36, cursor:'default'}}>{idx+1}</td>
+        {/* 项目名称 — click opens panel */}
+        <td onClick={()=>setPanelId(isSelected?null:r.id)} style={{padding:'8px 10px', fontWeight:600, color: isSelected?C.blue:'#111827', fontSize:13,
+          cursor:'pointer', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:180}}>
+          {r.tokenSymbol || (r.tokenName||'').split('/')[0]}
+        </td>
+        {/* 备注/卡点 */}
+        <CellEdit r={r} field="blocker">
+          {r.blocker
+            ? <span style={{color:'#C2410C', fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>🚧 {r.blocker}</span>
+            : <span style={{color:'#D1D5DB', fontSize:12, fontStyle:'italic'}}>—</span>}
+        </CellEdit>
+        {/* 区块链 — searchable dropdown */}
+        <CellEdit r={r} field="chainRaw">
+          <span style={{color:'#0369A1', fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
+            {r.chainRaw||(r.chainLabels||[]).join('/')||'—'}
+          </span>
+        </CellEdit>
+        {/* 状态 */}
+        <CellEdit r={r} field="status">
+          <span style={{background:ss.bg, color:ss.color, fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99, whiteSpace:'nowrap'}}>{ss.label}</span>
+        </CellEdit>
+        {/* 交易对 — multi-select searchable */}
+        <CellEdit r={r} field="quoteCurrencies">
+          {r.chainOnly
+            ? <span style={{background:'#EDE9FE',color:'#7C3AED',fontSize:11,fontWeight:600,padding:'1px 7px',borderRadius:99}}>仅上链</span>
+            : (r.quoteCurrencies||[]).length>0
+              ? <div style={{display:'flex',gap:3,flexWrap:'nowrap',overflow:'hidden'}}>
+                  {(r.quoteCurrencies||[]).slice(0,3).map((q,i)=>(
+                    <span key={i} style={{background:'#EFF6FF',color:'#1D4ED8',fontSize:11,fontWeight:600,padding:'1px 6px',borderRadius:99,whiteSpace:'nowrap'}}>{q}</span>
+                  ))}
+                  {(r.quoteCurrencies||[]).length>3 && <span style={{fontSize:11,color:'#9CA3AF'}}>+{(r.quoteCurrencies||[]).length-3}</span>}
+                </div>
+              : <span style={{color:'#D1D5DB',fontSize:12,fontStyle:'italic'}}>—</span>
+          }
+        </CellEdit>
+        {/* 站点 — dropdown */}
+        {!siteFilter && (
+          <CellEdit r={r} field="site">
+            <span style={{background:siteS.bg,color:siteS.color,fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:99,whiteSpace:'nowrap'}}>
+              {siteInfo?.icon} {r.site}
+            </span>
+          </CellEdit>
+        )}
+        {/* 交易类型 — searchable dropdown */}
+        <CellEdit r={r} field="productDisplay">
+          <span style={{background:'#F3F4F6',color:'#374151',fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:99,whiteSpace:'nowrap'}}>
+            {r.productDisplay||r.product}{r.stableHub?' +SH':''}{r.launchpool?' +LP':''}
+          </span>
+        </CellEdit>
+        {/* 用户类型 */}
+        <CellEdit r={r} field="userType">
+          <span style={{fontSize:12, color:'#6B7280', whiteSpace:'nowrap'}}>{r.userType||'—'}</span>
+        </CellEdit>
+        {/* 预计上线时间 */}
+        <CellEdit r={r} field="expectedLaunchTime">
+          {r.expectedLaunchTime
+            ? <span style={{fontSize:12, color: isUpcoming&&wdays<=2?'#DC2626':'#D97706', fontWeight:600, whiteSpace:'nowrap'}}>
+                {fmtLaunchTime(r.expectedLaunchTime)}
+                {isUpcoming && <span style={{marginLeft:5, fontSize:10, opacity:.8}}>{wdays===0?'今天':wdays===1?'明天':`${wdays}天`}</span>}
+              </span>
+            : <span style={{fontSize:12, color:'#D1D5DB', fontStyle:'italic'}}>—</span>
+          }
+        </CellEdit>
+        {/* 进度 */}
+        <td style={{padding:'8px 10px'}}>
+          <div style={{display:'flex', alignItems:'center', gap:5, cursor:'pointer'}} onClick={()=>setPanelId(isSelected?null:r.id)}>
+            <div style={{width:36, background:'#E5E7EB', borderRadius:99, height:4, overflow:'hidden', flexShrink:0}}>
+              <div style={{width:`${pct}%`, height:'100%', background:pct===100?'#059669':C.blue, borderRadius:99, transition:'width .3s'}}/>
+            </div>
+            <span style={{fontSize:11, color:'#9CA3AF', whiteSpace:'nowrap'}}>{done}/{cl.length}</span>
+          </div>
+        </td>
+        {/* 阶段进度 — 仅分站点视图 */}
+        {siteFilter && PHASE_COLS.map(p => {
+          const ps = cl.map((step,i)=>({...step,idx:i})).filter(s=>s.phase===p.phaseName);
+          if (ps.length===0) return <td key={p.key} style={{padding:'5px 4px', textAlign:'center'}}><span style={{color:'#E5E7EB',fontSize:11}}>—</span></td>;
+          const phDone = ps.filter(s=>(r.checked||{})[s.idx]||(r.naSteps||{})[s.idx]).length;
+          const allDone = phDone===ps.length;
+          const someDone = phDone>0;
+          const PHASE_BG = {pre:allDone?'#D1FAE5':someDone?'#FEF3C7':'#F3F4F6',bd:allDone?'#D1FAE5':someDone?'#DBEAFE':'#F3F4F6',compliance:allDone?'#D1FAE5':someDone?'#FCE7F3':'#F3F4F6',exec:allDone?'#D1FAE5':someDone?'#D1FAE5':'#F3F4F6',launch:allDone?'#D1FAE5':someDone?'#EDE9FE':'#F3F4F6'};
+          const PHASE_C  = {pre:allDone?'#059669':someDone?'#92400E':'#9CA3AF',bd:allDone?'#059669':someDone?'#1E40AF':'#9CA3AF',compliance:allDone?'#059669':someDone?'#BE185D':'#9CA3AF',exec:allDone?'#059669':someDone?'#065F46':'#9CA3AF',launch:allDone?'#059669':someDone?'#5B21B6':'#9CA3AF'};
+          return (
+            <td key={p.key} style={{padding:'5px 4px', textAlign:'center'}}
+              onClick={e=>{e.stopPropagation();if(isSelected&&panelPhase===p.key){setPanelId(null);setPanelPhase(null);}else{setPanelId(r.id);setPanelPhase(p.key);}}}>
+              <div style={{display:'inline-flex',flexDirection:'column',alignItems:'center',gap:2,cursor:'pointer'}}>
+                <div style={{width:28,height:4,borderRadius:99,background:PHASE_BG[p.key],border:`1px solid ${PHASE_C[p.key]}30`,overflow:'hidden'}}>
+                  <div style={{width:`${ps.length?phDone/ps.length*100:0}%`,height:'100%',background:PHASE_C[p.key],borderRadius:99}}/>
+                </div>
+                <span style={{fontSize:9,color:PHASE_C[p.key],fontWeight:600,lineHeight:1}}>{phDone}/{ps.length}</span>
+              </div>
+            </td>
+          );
+        })}
+      </tr>
+    );
+  };
+
+  // Export to Excel
+  const exportExcel = () => {
+    const PHASE_NAMES = [
+      {key:'pre',phaseName:'前置确认'},{key:'bd',phaseName:'业务评估'},
+      {key:'compliance',phaseName:'合规/VAAP'},{key:'exec',phaseName:'执行配置'},{key:'launch',phaseName:'正式上线'},
+    ];
+    const headers = ['#','代币名称','站点','产品类型','状态','进度%','完成/总计','预计上线时间','备注/卡点','区块链','前置','BD','合规','执行','上线'];
+    const rows = records.filter(r=>!siteFilter||r.site===siteFilter).map((r,i)=>{
+      const cl = buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool});
+      const done = countDone(r.checked,r.naSteps);
+      const status = getRecordStatus(r,cl.length);
+      const statusLabel = {not_started:'未开始',in_progress:'进行中',completed:'已完成',cancelled:'已取消'}[status]||status;
+      const phases = PHASE_NAMES.map(p=>{
+        const ps = cl.map((s,idx)=>({...s,idx})).filter(s=>s.phase===p.phaseName);
+        if (!ps.length) return 'N/A';
+        const pd = ps.filter(s=>(r.checked||{})[s.idx]||(r.naSteps||{})[s.idx]).length;
+        return `${pd}/${ps.length}`;
+      });
+      return [
+        i+1, r.tokenName||r.tokenSymbol||'', r.site,
+        r.product+(r.stableHub?' +SH':'')+(r.launchpool?' +LP':''),
+        statusLabel,
+        cl.length?`${Math.round(done/cl.length*100)}%`:'0%',
+        `${done}/${cl.length}`,
+        r.expectedLaunchTime?new Date(r.expectedLaunchTime).toLocaleString('zh-CN'):'',
+        r.blocker||'',
+        r.chainRaw||(r.chainLabels||[]).join('/')||'',
+        ...phases,
+      ];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers,...rows]);
+    ws['!cols'] = [4,14,8,12,7,6,8,14,20,10,6,6,6,6,6].map(w=>({wch:w}));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '上币进度');
+    XLSX.writeFile(wb, `OSL上币进度_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  // Close dropdown on outside click
+  useEffect(()=>{
+    const handler = ()=>setEditingCell(null);
+    document.addEventListener('click', handler);
+    return ()=>document.removeEventListener('click', handler);
+  },[]);
+
+  const STATUS_CHIPS = [
+    {key:'all', label:'全部', color:'#374151', bg:'#F3F4F6'},
+    {key:'in_progress', label:'进行中', color:'#D97706', bg:'#FEF3C7'},
+    {key:'not_started', label:'未开始', color:'#6B7280', bg:'#F9FAFB'},
+    {key:'completed',   label:'已完成', color:'#059669', bg:'#D1FAE5'},
+    {key:'cancelled',   label:'已取消', color:'#9CA3AF', bg:'#F3F4F6'},
+  ];
+
+  return (
+    <div style={{display:'flex', flexDirection:'row', height:'100%'}} onClick={()=>setEditingCell(null)}>
+      {/* Left: toolbar + table */}
+      <div style={{display:'flex', flexDirection:'column', flex:1, minWidth:0, overflow:'hidden'}}>
+        {/* Toolbar */}
+        <div style={{borderBottom:'1px solid #E5E7EB', background:'white', flexShrink:0}}>
+          {/* Top row */}
+          <div style={{display:'flex', alignItems:'center', gap:8, padding:'9px 16px'}}>
+            <div style={{fontWeight:700, fontSize:14, color:'#111827'}}>上币进度</div>
+            <span style={{fontSize:11, color:'#9CA3AF', marginRight:'auto'}}>
+              {allRows.length < records.filter(r=>!siteFilter||r.site===siteFilter).length
+                ? `${allRows.length} / ${records.filter(r=>!siteFilter||r.site===siteFilter).length} 条`
+                : `${allRows.length} 条记录`}
+            </span>
+            <button onClick={exportExcel}
+              style={{background:'white',color:'#374151',border:'1px solid #E5E7EB',borderRadius:7,padding:'5px 11px',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+              📤 导出
+            </button>
+            <button onClick={()=>{const i=document.createElement('input');i.type='file';i.accept='.xlsx,.xls';i.onchange=e=>onImport(e.target.files[0]);i.click();}}
+              style={{background:'white',color:'#374151',border:'1px solid #E5E7EB',borderRadius:7,padding:'5px 11px',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+              📥 导入
+            </button>
+            <button onClick={()=>onNew()}
+              style={{background:C.blue,color:'white',border:'none',borderRadius:7,padding:'5px 13px',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+              + 添加记录
+            </button>
+          </div>
+          {/* Search + filter row */}
+          <div style={{display:'flex', alignItems:'center', gap:8, padding:'0 16px 9px', flexWrap:'wrap'}}>
+            <div style={{position:'relative', flexShrink:0}}>
+              <span style={{position:'absolute',left:9,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'#9CA3AF',pointerEvents:'none'}}>🔍</span>
+              <input value={tableSearch} onChange={e=>setTableSearch(e.target.value)}
+                placeholder="搜索代币名称..."
+                style={{fontSize:12,border:'1px solid #E5E7EB',borderRadius:7,padding:'5px 10px 5px 28px',
+                  outline:'none',width:160,fontFamily:'inherit',background:tableSearch?'#EBF4FB':'white'}}/>
+              {tableSearch && <span onClick={()=>setTableSearch('')}
+                style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',cursor:'pointer',fontSize:12,color:'#9CA3AF'}}>✕</span>}
+            </div>
+            <div style={{display:'flex', gap:4}}>
+              {STATUS_CHIPS.map(chip=>(
+                <button key={chip.key} onClick={()=>setStatusFilt(chip.key)}
+                  style={{fontSize:11,padding:'3px 10px',borderRadius:99,cursor:'pointer',fontWeight:statusFilt===chip.key?700:500,
+                    background:statusFilt===chip.key?chip.bg:'transparent',
+                    color:statusFilt===chip.key?chip.color:'#9CA3AF',
+                    border:`1px solid ${statusFilt===chip.key?chip.color+'60':'#E5E7EB'}`}}>
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Table */}
+        <div style={{flex:1, overflow:'auto'}} onClick={e=>e.stopPropagation()}>
+          <style>{`.edit-icon{opacity:0}.hover-row:hover .edit-icon{opacity:1}`}</style>
+          <table style={{width:'100%', borderCollapse:'collapse', fontSize:13, tableLayout:'fixed'}}>
+            <colgroup>
+              <col style={{width:36}}/><col style={{width:140}}/><col style={{width:130}}/><col style={{width:80}}/>
+              <col style={{width:74}}/><col style={{width:110}}/>
+              {!siteFilter && <col style={{width:72}}/>}
+              <col style={{width:80}}/><col style={{width:72}}/><col style={{width:95}}/><col style={{width:58}}/>
+              {siteFilter && PHASE_COLS.map(p=><col key={p.key} style={{width:42}}/>)}
+            </colgroup>
+            <thead>
+              <tr style={{background:'#F8FAFC', position:'sticky', top:0, zIndex:10}}>
+                {COLS.map((c,ci)=>{
+                  const isPhaseCol = siteFilter && ci >= COLS.length - PHASE_COLS.length;
+                  const phaseIdx = isPhaseCol ? ci - (COLS.length - PHASE_COLS.length) : -1;
+                  const PHASE_BG = ['#FEF3C7','#DBEAFE','#FCE7F3','#D1FAE5','#EDE9FE'];
+                  const PHASE_C  = ['#92400E','#1E40AF','#BE185D','#065F46','#5B21B6'];
+                  return (
+                    <th key={c} style={{padding: isPhaseCol?'7px 4px':'9px 10px', textAlign: isPhaseCol?'center':'left',
+                      fontWeight:700, color: isPhaseCol?PHASE_C[phaseIdx]:'#374151',
+                      borderBottom:'2px solid #E5E7EB', fontSize:11, whiteSpace:'nowrap', overflow:'hidden',
+                      background: isPhaseCol?PHASE_BG[phaseIdx]:'#F8FAFC',
+                      borderLeft: isPhaseCol?`2px solid ${PHASE_C[phaseIdx]}30`:undefined,
+                    }}>{c}</th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {/* 即将上线 section */}
+              {upcoming.length>0 && <>
+                <tr><td colSpan={colN} style={{padding:'8px 10px', background:'#FEF3C7', borderBottom:'1px solid #FDE68A'}}>
+                  <span style={{fontSize:12, fontWeight:800, color:'#92400E'}}>🚀 即将上线</span>
+                  <span style={{fontSize:11, color:'#B45309', marginLeft:8}}>7个工作日内 · {upcoming.length}个项目</span>
+                </td></tr>
+                {upcoming.map((r,i)=><RowRender key={r.id} r={r} idx={i+1} isUpcoming={true}/>)}
+                <tr><td colSpan={colN} style={{padding:'6px 10px', background:'#F8FAFC', borderBottom:'2px solid #E5E7EB'}}>
+                  <span style={{fontSize:11, color:'#9CA3AF', fontWeight:600}}>其他记录</span>
+                </td></tr>
+              </>}
+              {/* Rest */}
+              {rest.map((r,i)=><RowRender key={r.id} r={r} idx={i+1} isUpcoming={false}/>)}
+              {allRows.length===0 && (
+                <tr><td colSpan={colN} style={{textAlign:'center', padding:'60px 0', color:'#9CA3AF', fontSize:13}}>
+                  暂无记录，点击「+ 添加记录」新建
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {/* Right: detail panel */}
+      {panelRecord && (
+        <DetailPanel
+          record={panelRecord}
+          onClose={()=>{setPanelId(null);setPanelPhase(null);}}
+          onUpdate={onUpdate}
+          onOpenFull={onOpen}
+          onCopy={onCopy}
+          scrollToPhase={panelPhase}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function Sidebar({ page, onPage, records }) {
+  const counts = { HK:0, Global:0, ID:0 };
+  records.forEach(r => { if(counts[r.site]!==undefined && !r.cancelled) counts[r.site]++; });
+  const total = records.filter(r=>!r.cancelled).length;
+
+  const NavItem = ({ id, icon, label, count, indent }) => (
+    <div onClick={()=>onPage(id)} style={{
+      display:'flex', alignItems:'center', gap:6, padding: indent ? '6px 8px 6px 22px' : '7px 12px',
+      cursor:'pointer', borderRadius:7, margin:'1px 8px',
+      background: page===id ? 'rgba(255,255,255,0.15)' : 'transparent',
+      color: page===id ? 'white' : 'rgba(255,255,255,0.7)',
+      fontWeight: page===id ? 700 : 400, fontSize:13, transition:'all 0.1s',
+    }}
+    onMouseEnter={e=>{ if(page!==id) e.currentTarget.style.background='rgba(255,255,255,0.08)'; }}
+    onMouseLeave={e=>{ if(page!==id) e.currentTarget.style.background='transparent'; }}>
+      <span style={{fontSize:15}}>{icon}</span>
+      <span style={{flex:1}}>{label}</span>
+      {count!=null && <span style={{fontSize:11, background:'rgba(255,255,255,0.2)', borderRadius:99, padding:'1px 7px', fontWeight:700}}>{count}</span>}
+    </div>
+  );
+
+  return (
+    <div style={{
+      width:160, background:C.navy, height:'100vh', flexShrink:0,
+      display:'flex', flexDirection:'column', overflow:'hidden',
+      borderRight:'1px solid rgba(255,255,255,0.1)',
+    }}>
+      {/* Logo */}
+      <div style={{padding:'14px 12px 10px', borderBottom:'1px solid rgba(255,255,255,0.1)'}}>
+        <div style={{color:'white', fontWeight:800, fontSize:13}}>OSL 上币</div>
+        <div style={{color:'rgba(255,255,255,0.45)', fontSize:10, marginTop:2}}>Listing Ops</div>
+      </div>
+      {/* Nav */}
+      <div style={{flex:1, overflowY:'auto', padding:'10px 0'}}>
+        <NavItem id="overview" icon="📋" label="总表" count={total} />
+        <div style={{padding:'10px 16px 4px', fontSize:11, color:'rgba(255,255,255,0.4)', fontWeight:600, letterSpacing:0.5}}>分站点</div>
+        <NavItem id="HK"     icon="🇭🇰" label="香港站"   count={counts.HK}     indent />
+        <NavItem id="Global" icon="🌐" label="国际站"   count={counts.Global} indent />
+        <NavItem id="ID"     icon="🇮🇩" label="印尼站"   count={counts.ID}     indent />
+      </div>
+      {/* Footer */}
+      <div style={{padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.1)', fontSize:11, color:'rgba(255,255,255,0.35)'}}>
+        已同步至云端
+      </div>
+    </div>
+  );
+}
+
+// ─── Site View (tabbed) ───────────────────────────────────────────────────────
+const SITE_TABS = {
+  HK:     [
+    { key:'all',         label:'全部',     products:null },
+    { key:'orderbook',   label:'Orderbook',  products:['Orderbook'] },
+    { key:'rfq_otc',     label:'RFQ / OTC',  products:['RFQ','OTC'] },
+    { key:'wealth',      label:'理财代币',    products:['WealthToken'] },
+    { key:'chainonly',   label:'仅上链',     products:['ChainOnly'] },
+    { key:'maintenance', label:'网络维护',    products:['Maintenance'] },
+  ],
+  Global: [
+    { key:'all',         label:'全部',     products:null },
+    { key:'orderbook',   label:'Orderbook',  products:['Orderbook'] },
+    { key:'rfq_otc',     label:'RFQ / OTC',  products:['RFQ','OTC'] },
+    { key:'stablehub',   label:'StableHub',  products:['RFQ'], filter: r=>r.stableHub },
+    { key:'perp',        label:'Perp',       products:['Perp'] },
+    { key:'chainonly',   label:'仅上链',     products:['ChainOnly'] },
+    { key:'maintenance', label:'网络维护',    products:['Maintenance'] },
+  ],
+  ID:     [
+    { key:'all',         label:'全部',     products:null },
+    { key:'orderbook',   label:'Orderbook',  products:['Orderbook'] },
+    { key:'launchpool',  label:'Launchpool', products:['Orderbook'], filter: r=>r.launchpool },
+    { key:'chainonly',   label:'仅上链',     products:['ChainOnly'] },
+    { key:'maintenance', label:'网络维护',    products:['Maintenance'] },
+  ],
+  SG:     [
+    { key:'all',         label:'全部',     products:null },
+    { key:'rfq_otc',     label:'RFQ / OTC',  products:['RFQ','OTC'] },
+    { key:'chainonly',   label:'仅上链',     products:['ChainOnly'] },
+    { key:'maintenance', label:'网络维护',    products:['Maintenance'] },
+  ],
+};
+
+function SiteView({ site, records, onOpen, onUpdate, onNew, onImport, onDelete, onRestore, onCopy }) {
+  const [activeTab, setActiveTab] = useState('all');
+  const tabs = SITE_TABS[site] || SITE_TABS.HK;
+  const tab = tabs.find(t=>t.key===activeTab) || tabs[0];
+
+  // Count per tab
+  const siteRecords = records.filter(r=>r.site===site);
+  const countFor = (t) => {
+    let rs = siteRecords;
+    if (t.products) rs = rs.filter(r=>t.products.includes(r.product));
+    if (t.filter)   rs = rs.filter(t.filter);
+    return rs.length;
+  };
+
+  // Build productFilter for OverviewTable
+  const productFilter = tab.products;
+  const extraFilter = tab.filter;
+
+  // Filter records for this tab
+  const tabRecords = records.filter(r => {
+    if (r.site !== site) return false;
+    if (productFilter && !productFilter.includes(r.product)) return false;
+    if (extraFilter && !extraFilter(r)) return false;
+    return true;
+  });
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
+      {/* Tab bar */}
+      <div style={{display:'flex', alignItems:'center', gap:2, padding:'0 16px',
+        background:'white', borderBottom:'1px solid #E5E7EB', flexShrink:0, overflowX:'auto'}}>
+        {tabs.map(t => {
+          const cnt = countFor(t);
+          const active = t.key===activeTab;
+          return (
+            <button key={t.key} onClick={()=>setActiveTab(t.key)} style={{
+              border:'none', background:'none', cursor:'pointer',
+              padding:'11px 14px', fontSize:13, fontWeight: active?700:400,
+              color: active?C.navy:'#6B7280', borderBottom: active?`2px solid ${C.navy}`:'2px solid transparent',
+              whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:5,
+              marginBottom:-1,
+            }}>
+              {t.label}
+              {cnt>0 && <span style={{fontSize:11, background: active?C.navy:'#E5E7EB', color: active?'white':'#6B7280',
+                borderRadius:99, padding:'1px 6px', fontWeight:700}}>{cnt}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {/* Table */}
+      <div style={{flex:1, overflow:'hidden', display:'flex', flexDirection:'column'}}>
+        <OverviewTable
+          records={tabRecords}
+          onOpen={onOpen}
+          onUpdate={onUpdate}
+          onNew={onNew}
+          onImport={onImport}
+          onDelete={onDelete}
+          onRestore={onRestore}
+          onCopy={onCopy}
+          siteFilter={site}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── App shell ────────────────────────────────────────────────────────────────
 function App() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('dashboard');
+  const [sidebarPage, setSidebarPage] = useState('overview'); // 'overview'|'HK'|'Global'|'ID'
   const [activeId, setActiveId] = useState(null);
   const [toasts, setToasts] = useState([]);
 
@@ -1866,6 +3026,26 @@ function App() {
     addToast(`↩ 已恢复：${r?.tokenName||''}`, 'success');
   };
 
+  const handleCopy = (record, targetSite) => {
+    const newRecord = {
+      ...record,
+      id: genId(),
+      site: targetSite,
+      checked: {},
+      naSteps: {},
+      stepNotes: {},
+      stepFields: {},
+      cancelled: false,
+      cancelReason: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    syncRecord(newRecord);
+    setRecords(prev=>[newRecord,...prev]);
+    const siteLabel = SITES.find(s=>s.id===targetSite)?.label || targetSite;
+    addToast(`📋 已复制：${record.tokenName} → ${siteLabel}`, 'success');
+  };
+
   const handleImport = (arr) => {
     arr.forEach(r => syncRecord(r));
     setRecords(prev => [...prev, ...arr]);
@@ -1874,6 +3054,70 @@ function App() {
 
   const handleOpen = (id) => { setActiveId(id); setView('checklist'); };
   const handleBack = () => { setActiveId(null); setView('dashboard'); };
+  const handleImportFile = (file) => {
+    if (!file) return;
+    // reuse same XLSX parse logic inline
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+        const SITE_MAP = {'OSL HK':'HK','HK':'HK','Global':'Global','OSL Global':'Global','OSL ID':'ID','OSL ID ':'ID','ID':'ID'};
+        const PRODUCT_MAP = {'OTC':'OTC','Orderbook':'Orderbook','RFQ':'RFQ','仅上链':'ChainOnly','理财代币':'WealthToken'};
+        const IGNORE_PRODUCTS = ['StableHub','Launchpool'];
+        const newRecords = [];
+        rows.forEach(row => {
+          const ticker = (row['Token Ticker']||row['Token']||'').toString().trim();
+          if (!ticker) return;
+          const siteRaw = (row['站点']||row['Site']||'').toString().trim();
+          const productRaw = (row['交易类型']||row['Product']||'').toString().trim();
+          const siteParts = siteRaw.split(',').map(s=>s.trim()).filter(Boolean);
+          const sites = siteParts.map(s=>SITE_MAP[s]).filter(Boolean);
+          if (sites.length===0) sites.push('HK');
+          const productParts = productRaw.split(',').map(s=>s.trim()).filter(Boolean);
+          const stableHub = productParts.some(p=>p==='StableHub');
+          const launchpool = productParts.some(p=>p==='Launchpool');
+          const products = productParts.filter(p=>!IGNORE_PRODUCTS.includes(p)).map(p=>PRODUCT_MAP[p]).filter(Boolean);
+          if (products.length===0) products.push('OTC');
+          const chainRaw = (row['区块链']||'').toString().trim();
+          const chainLabels = chainRaw ? chainRaw.split('/').map(s=>s.trim()).filter(Boolean) : [];
+          const quoteRaw = (row['交易对名称']||row['交易对']||'').toString().trim();
+          const quoteCurrencies = quoteRaw ? quoteRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+          let expectedLaunchTime = null;
+          const ltRaw = row['预计上线时间']||'';
+          if (ltRaw instanceof Date) expectedLaunchTime = ltRaw.toISOString();
+          else if (typeof ltRaw==='number'&&ltRaw>0) { try{ const d=XLSX.SSF.parse_date_code(ltRaw); if(d) expectedLaunchTime=new Date(d.y,d.m-1,d.d,d.H||0,d.M||0).toISOString(); }catch{} }
+          else if (typeof ltRaw==='string'&&ltRaw.trim()) { const p=new Date(ltRaw.trim()); if(!isNaN(p)) expectedLaunchTime=p.toISOString(); }
+          const userType = (row['用户类型']||'').toString().trim();
+          const expectedMM = (row['做市商']||'').toString().trim();
+          const tokenSymbol = ticker.toUpperCase();
+          const tokenName = quoteCurrencies.length>0 ? quoteCurrencies.map(q=>`${tokenSymbol}/${q}`).join(', ') : tokenSymbol;
+          sites.forEach(site => {
+            products.forEach(product => {
+              newRecords.push({
+                _key: tokenSymbol+'|'+site+'|'+product,
+                id:genId(), tokenName, tokenSymbol, quoteCurrencies,
+                chainLabels, chainOnly:product==='ChainOnly', chains:[],
+                userType, expectedMM, expectedLaunchTime,
+                site, product, tokenType:'subtoken',
+                stableHub: site==='Global'&&product==='RFQ'?stableHub:false,
+                launchpool: site==='ID'?launchpool:false,
+                blocker:'', checked:{}, naSteps:{}, stepNotes:{}, notes:'',
+                createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(),
+                estimatedTime:estimateTime(site,product,'subtoken'),
+              });
+            });
+          });
+        });
+        const existingKeys = new Set(records.map(r=>(r.tokenSymbol||r.tokenName).toUpperCase()+'|'+r.site+'|'+r.product));
+        const toImport = newRecords.filter(r=>!existingKeys.has(r._key)).map(({_key,...rest})=>rest);
+        if (toImport.length>0) { handleImport(toImport); }
+        else addToast('没有新记录需要导入（全部重复）','warn');
+      } catch(err) { addToast('解析文件失败：'+err.message,'error'); }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   if (loading) return (
     <div style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100vh', gap:16, color:'#6B7280'}}>
@@ -1884,9 +3128,12 @@ function App() {
   );
 
   const TOAST_COLORS = { success:'#059669', warn:'#D97706', info:'#2E75B6', error:'#DC2626' };
+  const showSidebar = view === 'dashboard';
 
   return (
-    <div>
+    <div style={{display:'flex', height:'100vh'}}>
+      <style>{`@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}`}</style>
+
       {/* Toast notifications */}
       <div style={{position:'fixed', top:16, right:16, zIndex:9999, display:'flex', flexDirection:'column', gap:8, pointerEvents:'none'}}>
         {toasts.map(t=>(
@@ -1899,12 +3146,45 @@ function App() {
           }}>{t.msg}</div>
         ))}
       </div>
-      <style>{`@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}`}</style>
 
-      {view==='dashboard' && <Dashboard records={records} onOpen={handleOpen} onNew={()=>setView('new')} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} onViewCompleted={()=>setView('completed')} onImport={handleImport}/>}
-      {view==='new' && <NewListingWizard onSave={handleSave} onCancel={()=>setView('dashboard')} existingRecords={records} onOpenExisting={id=>{ setActiveId(id); setView('checklist'); }}/>}
-      {view==='checklist' && activeRecord && <ChecklistView record={activeRecord} onBack={handleBack} onUpdate={handleUpdate} addToast={addToast}/>}
-      {view==='completed' && <CompletedTable records={records} onBack={()=>setView('dashboard')}/>}
+      {/* Sidebar — visible only on dashboard */}
+      {showSidebar && (
+        <Sidebar page={sidebarPage} onPage={setSidebarPage} records={records}/>
+      )}
+
+      {/* Main content */}
+      <div style={{flex:1, overflow:'hidden', display:'flex', flexDirection:'column', background:'#F8FAFC', minHeight:0}}>
+        {view==='dashboard' && (
+          sidebarPage==='overview' ? (
+            <OverviewTable
+              records={records}
+              onOpen={handleOpen}
+              onUpdate={handleUpdate}
+              onNew={()=>setView('new')}
+              onImport={handleImportFile}
+              onDelete={handleDelete}
+              onRestore={handleRestore}
+              onCopy={handleCopy}
+              siteFilter={null}
+            />
+          ) : (
+            <SiteView
+              site={sidebarPage}
+              records={records}
+              onOpen={handleOpen}
+              onUpdate={handleUpdate}
+              onNew={()=>setView('new')}
+              onImport={handleImportFile}
+              onDelete={handleDelete}
+              onRestore={handleRestore}
+              onCopy={handleCopy}
+            />
+          )
+        )}
+        {view==='new' && <NewListingWizard onSave={handleSave} onCancel={()=>setView('dashboard')} existingRecords={records} onOpenExisting={id=>{ setActiveId(id); setView('checklist'); }}/>}
+        {view==='checklist' && activeRecord && <ChecklistView record={activeRecord} onBack={handleBack} onUpdate={handleUpdate} addToast={addToast}/>}
+        {view==='completed' && <CompletedTable records={records} onBack={()=>setView('dashboard')}/>}
+      </div>
     </div>
   );
 }
