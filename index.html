@@ -1080,7 +1080,7 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
   const sInfo = SITES.find(s=>s.id===site);
 
   return (
-    <div>
+    <div style={{height:'100%', overflowY:'auto'}}>
       {/* Duplicate warning modal */}
       {dupWarning && (
         <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
