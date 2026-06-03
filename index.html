@@ -1016,6 +1016,7 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
 
   // ── Announcement fields (ChainOnly) ──────────────────────────────────────────
   const [annTokenSymbols, setAnnTokenSymbols] = useState('');
+  const [annTokenFullName, setAnnTokenFullName] = useState('');
   const [annChainName, setAnnChainName]       = useState('');
   const [annChainSuffix, setAnnChainSuffix]   = useState('');
   const [annDepositStatus, setAnnDepositStatus] = useState('Opened');
@@ -1097,6 +1098,20 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
           tokenSymbols: annTokenSymbols.trim() || tokenSymbol.trim(),
           chainName:    annChainName.trim(),
           chainSuffix:  annChainSuffix.trim(),
+          depositStatus: annDepositStatus,
+          tradingPairs: annTradingPairs.trim(),
+          aboutEN: annAboutEN.trim(),
+          aboutZH: annAboutZH.trim(),
+          aboutTC: annAboutTC.trim(),
+          website:    annWebsite.trim(),
+          whitepaper: annWhitepaper.trim(),
+          twitter:    annTwitter.trim(),
+        } : (prod === 'OTC' && site === 'Global') ? {
+          annType:      'GlobalOTC',
+          tokenSymbols: annTokenSymbols.trim() || tokenSymbol.trim(),
+          tokenFullName: annTokenFullName.trim() || tokenSymbol.trim(),
+          chainName:    annChainName.trim(),
+          chainSuffix:  annChainSuffix.trim(), // used as network label e.g. ERC20
           depositStatus: annDepositStatus,
           tradingPairs: annTradingPairs.trim(),
           aboutEN: annAboutEN.trim(),
@@ -1446,7 +1461,7 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
         )}
 
         {/* ── 公告配置（仅上链） ────────────────────────────── */}
-        {products.includes('ChainOnly') && (
+        {products.includes('ChainOnly') && tokenType && (
           <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16, border:'2px solid #E0F2FE'}}>
             <div style={{fontSize:14, fontWeight:700, color:'#0369A1', marginBottom:4}}>📢 公告配置 <span style={{fontSize:12, fontWeight:400, color:'#9CA3AF'}}>（可选，创建后可在任务页查看/复制三语公告）</span></div>
             <div style={{fontSize:12, color:'#6B7280', marginBottom:16}}>填写后，系统将自动生成中英繁三语上币公告，格式与模板一致</div>
@@ -1549,6 +1564,107 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
           </div>
         )}
 
+        {/* ── 公告配置（Global OTC） ─────────────────────────── */}
+        {products.includes('OTC') && site==='Global' && tokenType && (
+          <div style={{background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 12px rgba(0,0,0,0.07)', marginBottom:16, border:'2px solid #D4EFEC'}}>
+            <div style={{fontSize:14, fontWeight:700, color:'#1A7A6E', marginBottom:4}}>📢 公告配置 <span style={{fontSize:12, fontWeight:400, color:'#9CA3AF'}}>（可选，创建后可在任务页查看/复制三语公告）</span></div>
+            <div style={{fontSize:12, color:'#6B7280', marginBottom:16}}>Global OTC 上币公告，格式与模板一致，填写后自动生成中英繁三语</div>
+
+            {/* 全称 + 符号 */}
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12}}>
+              <div>
+                <div style={{fontSize:12, fontWeight:600, color:'#374151', marginBottom:5}}>代币全称 <span style={{color:'#9CA3AF'}}>(如 Ethena USDe)</span></div>
+                <input value={annTokenFullName} onChange={e=>setAnnTokenFullName(e.target.value)}
+                  placeholder={tokenSymbol.trim() || '如: Ethena USDe'}
+                  style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', outline:'none'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:12, fontWeight:600, color:'#374151', marginBottom:5}}>代币符号 <span style={{color:'#9CA3AF'}}>(如 USDe)</span></div>
+                <input value={annTokenSymbols} onChange={e=>setAnnTokenSymbols(e.target.value)}
+                  placeholder={tokenSymbol.trim() || '如: USDe'}
+                  style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', outline:'none'}}/>
+              </div>
+            </div>
+
+            {/* 链名 + 网络 + 充提状态 */}
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:12}}>
+              <div>
+                <div style={{fontSize:12, fontWeight:600, color:'#374151', marginBottom:5}}>链名称 <span style={{color:'#9CA3AF'}}>(如 Ethereum)</span></div>
+                <input value={annChainName} onChange={e=>setAnnChainName(e.target.value)}
+                  placeholder='如: Ethereum'
+                  style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', outline:'none'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:12, fontWeight:600, color:'#374151', marginBottom:5}}>网络标识 <span style={{color:'#9CA3AF'}}>(如 ERC20)</span></div>
+                <input value={annChainSuffix} onChange={e=>setAnnChainSuffix(e.target.value.toUpperCase())}
+                  placeholder='如: ERC20'
+                  style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', outline:'none'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:12, fontWeight:600, color:'#374151', marginBottom:5}}>充提状态</div>
+                <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                  {['Opened','Coming Soon'].map(opt=>(
+                    <button key={opt} onClick={()=>setAnnDepositStatus(opt)} style={{
+                      border:`1.5px solid ${annDepositStatus===opt?'#1A7A6E':'#E5E7EB'}`,
+                      borderRadius:7, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:annDepositStatus===opt?700:400,
+                      background:annDepositStatus===opt?'#D4EFEC':'white', color:annDepositStatus===opt?'#1A7A6E':'#374151',
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 交易对 */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:12, fontWeight:600, color:'#374151', marginBottom:5}}>交易对 <span style={{color:'#9CA3AF'}}>(每行一个，如 USDe/USD)</span></div>
+              <textarea value={annTradingPairs} onChange={e=>setAnnTradingPairs(e.target.value)}
+                placeholder={'USDe/USD\nUSDe/USDT\nUSDe/USDGO'}
+                rows={3}
+                style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', outline:'none', resize:'vertical'}}/>
+            </div>
+
+            {/* 关于此代币 - 3语 */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:12, fontWeight:600, color:'#374151', marginBottom:6}}>关于此代币（About {annTokenSymbols||annTokenFullName||'Token'}）</div>
+              <div style={{display:'flex', gap:0, marginBottom:6}}>
+                {['EN','简中','繁中'].map(lang=>(
+                  <button key={lang} onClick={()=>setAnnAboutLang(lang)} style={{
+                    border:'1px solid #E5E7EB', borderRight: lang==='繁中'?'1px solid #E5E7EB':'none',
+                    borderRadius: lang==='EN'?'7px 0 0 7px':lang==='繁中'?'0 7px 7px 0':'0',
+                    padding:'5px 12px', cursor:'pointer', fontSize:12, fontWeight:annAboutLang===lang?700:400,
+                    background:annAboutLang===lang?'#1A7A6E':'white', color:annAboutLang===lang?'white':'#374151',
+                  }}>{lang}</button>
+                ))}
+              </div>
+              {annAboutLang==='EN' && <textarea value={annAboutEN} onChange={e=>setAnnAboutEN(e.target.value)}
+                placeholder={`${annTokenFullName||'Token'} is a decentralized...`} rows={4}
+                style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', outline:'none', resize:'vertical'}}/>}
+              {annAboutLang==='简中' && <textarea value={annAboutZH} onChange={e=>setAnnAboutZH(e.target.value)}
+                placeholder={`${annTokenFullName||'代币'}是一种...`} rows={4}
+                style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', outline:'none', resize:'vertical'}}/>}
+              {annAboutLang==='繁中' && <textarea value={annAboutTC} onChange={e=>setAnnAboutTC(e.target.value)}
+                placeholder={`${annTokenFullName||'代幣'}是一種...`} rows={4}
+                style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', outline:'none', resize:'vertical'}}/>}
+            </div>
+
+            {/* 链接 */}
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10}}>
+              {[
+                {key:'website', label:'官网 URL', val:annWebsite, set:setAnnWebsite},
+                {key:'whitepaper', label:'白皮书 URL', val:annWhitepaper, set:setAnnWhitepaper},
+                {key:'twitter', label:'Twitter URL', val:annTwitter, set:setAnnTwitter},
+              ].map(({key,label,val,set})=>(
+                <div key={key}>
+                  <div style={{fontSize:12, fontWeight:600, color:'#374151', marginBottom:5}}>{label}</div>
+                  <input value={val} onChange={e=>set(e.target.value)}
+                    placeholder='https://'
+                    style={{width:'100%', border:'1.5px solid #E5E7EB', borderRadius:8, padding:'8px 11px', fontSize:12, fontFamily:'inherit', outline:'none'}}/>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Create button */}
         {canCreate && (
           <div style={{textAlign:'center'}}>
@@ -1573,17 +1689,60 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
 }
 
 // ─── Announcement View ─────────────────────────────────────────────────────────
-function AnnouncementView({ record, onClose }) {
+function AnnouncementView({ record, onClose, onUpdate }) {
   const [tab, setTab] = useState('EN');
   const [copied, setCopied] = useState(null);
-  const a = record.annFields || {};
+  const [showEdit, setShowEdit] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [fAboutLang, setFAboutLang] = useState('EN');
+  const a0 = record.annFields || {};
+
+  // Local editable state
+  const [fSymbols,     setFSymbols]     = useState(a0.tokenSymbols || record.tokenSymbol || '');
+  const [fChainName,   setFChainName]   = useState(a0.chainName || (record.chainLabels||[])[0] || '');
+  const [fSuffix,      setFSuffix]      = useState((a0.chainSuffix||'').toUpperCase());
+  const [fDepStatus,   setFDepStatus]   = useState(a0.depositStatus||'Opened');
+  const [fTradingPairs,setFTradingPairs]= useState(a0.tradingPairs||'');
+  const [fListingTime, setFListingTime] = useState(record.expectedLaunchTime ? record.expectedLaunchTime.slice(0,16) : '');
+  const [fAboutEN,     setFAboutEN]     = useState(a0.aboutEN||'');
+  const [fAboutZH,     setFAboutZH]     = useState(a0.aboutZH||'');
+  const [fAboutTC,     setFAboutTC]     = useState(a0.aboutTC||'');
+  const [fWebsite,     setFWebsite]     = useState(a0.website||'');
+  const [fWhitepaper,  setFWhitepaper]  = useState(a0.whitepaper||'');
+  const [fTwitter,     setFTwitter]     = useState(a0.twitter||'');
 
   // Token symbols array
-  const rawSymbols = (a.tokenSymbols || record.tokenSymbol || '').split(',').map(s=>s.trim()).filter(Boolean);
-  const chainName  = a.chainName || (record.chainLabels||[])[0] || '';
-  const suffix     = (a.chainSuffix||'').toUpperCase();
-  const tradSymbols = rawSymbols.map(s => s.toUpperCase() + suffix); // e.g. ["USDTMORPH","USDCMORPH"]
-  const pairs = (a.tradingPairs||'').split('\n').map(p=>p.trim()).filter(Boolean);
+  const rawSymbols = fSymbols.split(',').map(s=>s.trim()).filter(Boolean);
+  const chainName  = fChainName;
+  const suffix     = fSuffix;
+  const tradSymbols = rawSymbols.map(s => s.toUpperCase() + suffix);
+  const pairs = fTradingPairs.split('\n').map(p=>p.trim()).filter(Boolean);
+  const listingIso = fListingTime ? new Date(fListingTime).toISOString() : null;
+
+  const saveChanges = () => {
+    if (!onUpdate) return;
+    onUpdate({
+      ...record,
+      expectedLaunchTime: listingIso || record.expectedLaunchTime,
+      annFields: {
+        ...a0,
+        tokenSymbols: fSymbols,
+        chainName: fChainName,
+        chainSuffix: fSuffix,
+        depositStatus: fDepStatus,
+        tradingPairs: fTradingPairs,
+        aboutEN: fAboutEN,
+        aboutZH: fAboutZH,
+        aboutTC: fAboutTC,
+        website: fWebsite,
+        whitepaper: fWhitepaper,
+        twitter: fTwitter,
+      },
+      updatedAt: new Date().toISOString(),
+    });
+    setSaved(true);
+    setTimeout(()=>setSaved(false), 2000);
+  };
 
   // date formatters
   const fmtEN = (iso) => {
@@ -1602,7 +1761,7 @@ function AnnouncementView({ record, onClose }) {
     return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} (UTC+8)`;
   };
 
-  const depEN = a.depositStatus||'Opened';
+  const depEN = fDepStatus||'Opened';
   const depZH = depEN==='Opened'?'已开放':depEN==='Coming Soon'?'即将开放':depEN;
   const depTC = depEN==='Opened'?'已開放':depEN==='Coming Soon'?'即將開放':depEN;
 
@@ -1631,7 +1790,7 @@ function AnnouncementView({ record, onClose }) {
     const sym  = rawSymbols;
     const tSym = tradSymbols;
     const cn   = chainName;
-    const dateStr = isEN ? fmtEN(record.expectedLaunchTime) : fmtZH(record.expectedLaunchTime);
+    const dateStr = isEN ? fmtEN(listingIso) : fmtZH(listingIso);
     const depSt = isEN ? depEN : isZH ? depZH : depTC;
 
     // title lines
@@ -1645,15 +1804,15 @@ function AnnouncementView({ record, onClose }) {
       intro      = `We are thrilled to announce the new listing of <strong>${joinEN(sym)} on ${cn}.</strong> ${tSym.length>0?`Tradings of ${symBold} are available on <strong>OTC</strong> for <strong>PI investors.</strong>`:'Deposits and withdrawals are now available.'}`;
       timeHeader = 'Listing Timeline:';
       depLabel   = `<strong>Deposit and Withdrawal Open (${cn}):</strong> ${depSt}`;
-      dateLabel  = record.expectedLaunchTime ? `<strong>Listing Time:</strong> ${dateStr}` : null;
+      dateLabel  = listingIso ? `<strong>Listing Time:</strong> ${dateStr}` : null;
       pairsLabel = pairs.length>0 ? `<strong>Trading Pairs(OTC):</strong><ul>${pairs.map(p=>`<li>${p}</li>`).join('')}</ul>` : null;
       userLabel  = `<strong>Supported User Type:</strong> Professional Investors Only`;
       networkLine = tSym.map(s=>`<p>${s} Deposits and withdrawals will be available via the <strong>${cn}</strong> Network<strong>.</strong></p>`).join('');
       noteHead   = '<strong><em>Note:</em></strong>';
-      noteBody   = `<em>For trading rules of new pair listing, please refer to “<a href="${TRADING_RULES_URL}">Trading Rules</a>” for more information.</em>`;
+      noteBody   = `<em>For trading rules of new pair listing, please refer to “<a href=”${TRADING_RULES_URL}”>Trading Rules</a>” for more information.</em>`;
       aboutHeader = `<strong>About ${cn}</strong>`;
-      aboutText  = a.aboutEN || '';
-      learnMore  = `<strong>Learn more about ${cn}:</strong>${a.website?` <a href="${a.website}">Website</a>`:' Website'}${a.whitepaper?` | <a href="${a.whitepaper}">Whitepaper</a>`:''}${a.twitter?` | <a href="${a.twitter}">Twitter(X)</a>`:''}`;
+      aboutText  = fAboutEN || '';
+      learnMore  = `<strong>Learn more about ${cn}:</strong>${fWebsite?` <a href=”${fWebsite}”>Website</a>`:' Website'}${fWhitepaper?` | <a href=”${fWhitepaper}”>Whitepaper</a>`:''}${fTwitter?` | <a href=”${fTwitter}”>Twitter(X)</a>`:''}`;
       disHeader  = '<strong>Disclaimer</strong>';
       disBody    = DIS_EN1.split('\n').map(l=>`<p>${l}</p>`).join('') + `<p><strong>${DIS_EN2}</strong></p>`;
       aboutOSLHeader = '<strong>About OSL Hong Kong</strong>';
@@ -1666,15 +1825,15 @@ function AnnouncementView({ record, onClose }) {
       intro      = `我们很高兴地宣布OSL HK 新币上线：<strong>${cn}</strong>网络的${symBoldZH}。${tSym.length>0?`${tSym.join('和')}将在场外交易（<strong>OTC</strong>）为专业投资客户开放。`:'充提功能现已开放。'}`;
       timeHeader = '上线时间安排：';
       depLabel   = `<strong>充值和提现开放（${cn}）:</strong> ${depSt}`;
-      dateLabel  = record.expectedLaunchTime ? `<strong>开始时间：</strong>${dateStr}` : null;
+      dateLabel  = listingIso ? `<strong>开始时间：</strong>${dateStr}` : null;
       pairsLabel = pairs.length>0 ? `<strong>交易对（OTC）:</strong><ul>${pairs.map(p=>`<li>${p}</li>`).join('')}</ul>` : null;
       userLabel  = `<strong>支持的客户类型: 仅限专业投资者</strong>`;
       networkLine = tSym.map(s=>`<p>${s} 充值和提币可通过<strong>${cn}</strong>网络进行。</p>`).join('');
       noteHead   = '注意：';
-      noteBody   = `有关新交易对上市的交易规则，请参阅“<a href="${TRADING_RULES_URL}">交易规则</a>”以获取更多信息。`;
+      noteBody   = `有关新交易对上市的交易规则，请参阅”<a href=”${TRADING_RULES_URL}”>交易规则</a>”以获取更多信息。`;
       aboutHeader = `<strong>关于 ${cn}</strong>`;
-      aboutText  = a.aboutZH || '';
-      learnMore  = `了解更多关于${cn}：${a.website?`<a href="${a.website}">网站</a>`:'网站'}${a.whitepaper?` | <a href="${a.whitepaper}">白皮书</a>`:''}${a.twitter?` | <a href="${a.twitter}">Twitter(X)</a>`:''}`;
+      aboutText  = fAboutZH || '';
+      learnMore  = `了解更多关于${cn}：${fWebsite?`<a href=”${fWebsite}”>网站</a>`:'网站'}${fWhitepaper?` | <a href=”${fWhitepaper}”>白皮书</a>`:''}${fTwitter?` | <a href=”${fTwitter}”>Twitter(X)</a>`:''}`;
       disHeader  = '<strong>免责声明</strong>';
       disBody    = `<p>${DIS_ZH1}</p><p><strong>${DIS_ZH2}</strong></p>`;
       aboutOSLHeader = '<strong>关于OSL香港</strong>';
@@ -1687,15 +1846,15 @@ function AnnouncementView({ record, onClose }) {
       intro      = `我們很高興地宣佈OSL HK 新幣上線：<strong>${cn}</strong>網絡的${symBoldTC}。${tSym.length>0?`${tSym.join('和')}將在場外交易（<strong>OTC</strong>）爲專業投資客戶開放。`:'充提功能現已開放。'}`;
       timeHeader = '上線時間安排：';
       depLabel   = `<strong>充值和提現開放（${cn}）:</strong> ${depSt}`;
-      dateLabel  = record.expectedLaunchTime ? `<strong>開始時間：</strong>${dateStr}` : null;
+      dateLabel  = listingIso ? `<strong>開始時間：</strong>${dateStr}` : null;
       pairsLabel = pairs.length>0 ? `<strong>交易對（OTC）:</strong><ul>${pairs.map(p=>`<li>${p}</li>`).join('')}</ul>` : null;
       userLabel  = `<strong>支持的客戶類型: 僅限專業投資者</strong>`;
       networkLine = tSym.map(s=>`<p>${s} 充值和提幣可通過<strong>${cn}</strong>網絡進行。</p>`).join('');
       noteHead   = '注意：';
-      noteBody   = `有關新交易對上市的交易規則，請參閱“<a href="${TRADING_RULES_URL}">交易規則</a>”以獲取更多信息。`;
+      noteBody   = `有關新交易對上市的交易規則，請參閱”<a href=”${TRADING_RULES_URL}”>交易規則</a>”以獲取更多信息。`;
       aboutHeader = `<strong>關於 ${cn}</strong>`;
-      aboutText  = a.aboutTC || a.aboutZH || '';
-      learnMore  = `瞭解更多關於${cn}：${a.website?`<a href="${a.website}">網站</a>`:'網站'}${a.whitepaper?` | <a href="${a.whitepaper}">白皮書</a>`:''}${a.twitter?` | <a href="${a.twitter}">Twitter(X)</a>`:''}`;
+      aboutText  = fAboutTC || fAboutZH || '';
+      learnMore  = `瞭解更多關於${cn}：${fWebsite?`<a href=”${fWebsite}”>網站</a>`:'網站'}${fWhitepaper?` | <a href=”${fWhitepaper}”>白皮書</a>`:''}${fTwitter?` | <a href=”${fTwitter}”>Twitter(X)</a>`:''}`;
       disHeader  = '<strong>免責聲明</strong>';
       disBody    = `<p>${DIS_TC1}</p><p><strong>${DIS_TC2}</strong></p>`;
       aboutOSLHeader = '<strong>關於OSL香港</strong>';
@@ -1764,8 +1923,67 @@ ${aboutText ? `<p>${aboutText}</p>` : ''}
             <div style={{color:'white',fontWeight:800,fontSize:15}}>📢 三语上币公告</div>
             <div style={{color:'rgba(255,255,255,0.65)',fontSize:12,marginTop:2}}>{record.tokenName} · {chainName} · 点击"一键复制"后可直接粘贴至 Outlook/Word</div>
           </div>
+          <button onClick={()=>setShowEdit(v=>!v)} style={{background:'rgba(255,255,255,0.2)',border:'1px solid rgba(255,255,255,0.4)',color:'white',borderRadius:8,padding:'6px 12px',cursor:'pointer',fontSize:12,fontWeight:600}}>
+            ✏ {showEdit?'收起编辑':'编辑字段'}
+          </button>
           <button onClick={onClose} style={{background:'rgba(255,255,255,0.15)',border:'none',color:'white',borderRadius:8,padding:'6px 14px',cursor:'pointer',fontSize:13}}>✕ 关闭</button>
         </div>
+
+        {/* Editable fields panel */}
+        {showEdit && (
+          <div style={{background:'#EFF6FF',borderBottom:'2px solid #BFDBFE',padding:'14px 20px',flexShrink:0,overflowY:'auto',maxHeight:'45vh'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:10}}>
+              <div><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>代币符号 <span style={{color:'#9CA3AF'}}>(逗号分隔多个)</span></div>
+                <input value={fSymbols} onChange={e=>setFSymbols(e.target.value)} style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+              <div><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>链名称</div>
+                <input value={fChainName} onChange={e=>setFChainName(e.target.value)} style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+              <div><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>链代号后缀 (如MORPH)</div>
+                <input value={fSuffix} onChange={e=>setFSuffix(e.target.value.toUpperCase())} style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>上线时间 (Listing Time)</div>
+                <input type="datetime-local" value={fListingTime} onChange={e=>setFListingTime(e.target.value)} style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:11,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>充提状态</div>
+                <div style={{display:'flex',gap:6}}>
+                  {['Opened','Coming Soon'].map(opt=>(
+                    <button key={opt} onClick={()=>setFDepStatus(opt)} style={{border:`1.5px solid ${fDepStatus===opt?C.blue:'#D1D5DB'}`,borderRadius:6,padding:'4px 12px',cursor:'pointer',fontSize:12,fontWeight:fDepStatus===opt?700:400,background:fDepStatus===opt?'#EFF6FF':'white',color:fDepStatus===opt?C.blue:'#374151'}}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>交易对（每行一个）</div>
+              <textarea value={fTradingPairs} onChange={e=>setFTradingPairs(e.target.value)} rows={2}
+                style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>
+            </div>
+            <div style={{marginBottom:10}}>
+              <div style={{display:'flex',gap:0,marginBottom:5}}>
+                {[['EN','关于(EN)'],['ZH','关于(简中)'],['TC','关于(繁中)']].map(([l,label])=>(
+                  <button key={l} onClick={()=>setFAboutLang(l)} style={{border:'1px solid #BFDBFE',borderRight:l==='TC'?'1px solid #BFDBFE':'none',
+                    borderRadius:l==='EN'?'6px 0 0 6px':l==='TC'?'0 6px 6px 0':'0',padding:'4px 10px',cursor:'pointer',fontSize:11,fontWeight:fAboutLang===l?700:400,
+                    background:fAboutLang===l?C.blue:'white',color:fAboutLang===l?'white':'#374151'}}>{label}</button>
+                ))}
+              </div>
+              {fAboutLang==='EN' && <textarea value={fAboutEN} onChange={e=>setFAboutEN(e.target.value)} rows={3} style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>}
+              {fAboutLang==='ZH' && <textarea value={fAboutZH} onChange={e=>setFAboutZH(e.target.value)} rows={3} style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>}
+              {fAboutLang==='TC' && <textarea value={fAboutTC} onChange={e=>setFAboutTC(e.target.value)} rows={3} style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>}
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:12}}>
+              {[['官网',fWebsite,setFWebsite],['白皮书',fWhitepaper,setFWhitepaper],['Twitter',fTwitter,setFTwitter]].map(([lbl,val,set])=>(
+                <div key={lbl}><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>{lbl} URL</div>
+                  <input value={val} onChange={e=>set(e.target.value)} placeholder="https://" style={{width:'100%',border:'1.5px solid #BFDBFE',borderRadius:6,padding:'5px 8px',fontSize:11,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+              ))}
+            </div>
+            {onUpdate && (
+              <button onClick={saveChanges} style={{background:saved?'#059669':C.blue,color:'white',border:'none',borderRadius:8,padding:'8px 24px',fontSize:13,cursor:'pointer',fontWeight:700,transition:'background 0.2s'}}>
+                {saved?'✓ 已保存！':'💾 保存更改'}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Language tabs + copy */}
         <div style={{display:'flex',alignItems:'center',borderBottom:'2px solid #E5E7EB',padding:'0 20px',flexShrink:0,background:'#FAFAFA'}}>
@@ -1795,6 +2013,304 @@ ${aboutText ? `<p>${aboutText}</p>` : ''}
             style={{fontFamily:'Arial,sans-serif',fontSize:'11pt',lineHeight:1.7,color:'#111'}}
             dangerouslySetInnerHTML={{__html: buildHTML(tab)}}
           />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Announcement View: Global OTC ────────────────────────────────────────────
+function AnnouncementViewGlobal({ record, onClose, onUpdate }) {
+  const [tab, setTab] = useState('EN');
+  const [copied, setCopied] = useState(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const a0 = record.annFields || {};
+
+  // Local editable state — initialized from record
+  const [fSym,         setFSym]         = useState(a0.tokenSymbols   || record.tokenSymbol || '');
+  const [fFullName,    setFFullName]     = useState(a0.tokenFullName  || a0.tokenSymbols || record.tokenSymbol || '');
+  const [fChainName,   setFChainName]    = useState(a0.chainName      || '');
+  const [fNetwork,     setFNetwork]      = useState(a0.chainSuffix    || '');
+  const [fDepStatus,   setFDepStatus]    = useState(a0.depositStatus  || 'Opened');
+  const [fTradingPairs,setFTradingPairs] = useState(a0.tradingPairs   || '');
+  const [fListingTime, setFListingTime]  = useState(record.expectedLaunchTime ? record.expectedLaunchTime.slice(0,16) : '');
+  const [fAboutEN,     setFAboutEN]      = useState(a0.aboutEN        || '');
+  const [fAboutZH,     setFAboutZH]      = useState(a0.aboutZH        || '');
+  const [fAboutTC,     setFAboutTC]      = useState(a0.aboutTC        || '');
+  const [fWebsite,     setFWebsite]      = useState(a0.website        || '');
+  const [fWhitepaper,  setFWhitepaper]   = useState(a0.whitepaper     || '');
+  const [fTwitter,     setFTwitter]      = useState(a0.twitter        || '');
+  const [fAboutLang,   setFAboutLang]    = useState('EN');
+
+  const sym       = fSym.trim();
+  const fullName  = fFullName.trim() || sym;
+  const chainName = fChainName.trim();
+  const network   = fNetwork.trim();
+  const pairs     = fTradingPairs.split('\n').map(p=>p.trim()).filter(Boolean);
+  const listingIso = fListingTime ? new Date(fListingTime).toISOString() : null;
+
+  const saveChanges = () => {
+    if (!onUpdate) return;
+    onUpdate({
+      ...record,
+      expectedLaunchTime: listingIso || record.expectedLaunchTime,
+      annFields: {
+        ...a0,
+        annType: 'GlobalOTC',
+        tokenSymbols: fSym,
+        tokenFullName: fFullName,
+        chainName: fChainName,
+        chainSuffix: fNetwork,
+        depositStatus: fDepStatus,
+        tradingPairs: fTradingPairs,
+        aboutEN: fAboutEN,
+        aboutZH: fAboutZH,
+        aboutTC: fAboutTC,
+        website: fWebsite,
+        whitepaper: fWhitepaper,
+        twitter: fTwitter,
+      },
+      updatedAt: new Date().toISOString(),
+    });
+    setSaved(true);
+    setTimeout(()=>setSaved(false), 2000);
+  };
+
+  const fmtEN = (iso) => {
+    if (!iso) return 'TBA';
+    const d = new Date(iso);
+    const mo = ['January','February','March','April','May','June','July','August','September','October','November','December'][d.getMonth()];
+    const dy = d.getDate();
+    const sf = (dy===1||dy===21||dy===31)?'st':(dy===2||dy===22)?'nd':(dy===3||dy===23)?'rd':'th';
+    return `${mo} ${dy}${sf}, ${d.getFullYear()}, ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} (UTC+8)`;
+  };
+  const fmtZH = (iso) => {
+    if (!iso) return 'TBA';
+    const d = new Date(iso);
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} (UTC+8)`;
+  };
+
+  const depEN = fDepStatus||'Opened';
+  const depZH = depEN==='Opened'?'已开启':depEN==='Coming Soon'?'即将开放':depEN;
+  const depTC = depEN==='Opened'?'已開啓':depEN==='Coming Soon'?'即將開放':depEN;
+
+  const ABOUT_GLOBAL_EN = `OSL Group (HKEX: 863) is Asia's leading stablecoin trading and payment platform that strives to provide compliant and efficient digital financial infrastructure services globally, empowering enterprises, financial institutions and individuals to seamlessly exchange, pay, trade, and settle between fiat and digital currencies. Grounded in the core values of <strong>Open, Secure, and Licensed</strong>, it is committed to building a more efficient ecosystem that connects global markets and enables instant, seamless and compliant value movement worldwide.`;
+  const ABOUT_GLOBAL_ZH = `OSL集团（港交所代码：863）是亚洲领先的稳定币交易和支付平台，致力于在全球范围内提供合规高效的数字金融基础设施服务，赋能企业、金融机构和个人实现法币与数字货币之间的无缝兑换、支付、交易和结算。秉持<strong>开放、安全、合法</strong>的核心价值观，OSL集团致力于构建连接全球市场的更高效生态系统，实现全球范围内即时、无缝且合规的价值流动。`;
+  const ABOUT_GLOBAL_TC = `OSL集團（港交所代碼：863）是亞洲領先的穩定幣交易和支付平台，致力於在全球範圍內提供合規高效的數位金融基礎設施服務，賦能企業、金融機構和個人實現法幣與數位貨幣之間的無縫兌換、支付、交易和結算。秉持<strong>開放、安全、合法</strong>的核心價值觀，OSL集團致力於建構連接全球市場的更有效率生態系統，實現全球即時、無縫且合規的價值流動。`;
+
+  const DIS_GLOBAL_EN = `This announcement is for informational purposes only and does not constitute financial, investment, or trading advice, nor an offer or solicitation to trade. OSL does not guarantee the accuracy or completeness of this information and shall not be held liable for its use. Digital assets are highly speculative, volatile, and may become illiquid; investors risk losing their entire investment. Information herein may not be suitable for all persons or permitted in certain jurisdictions. You are responsible for conducting your own research, evaluating your risk appetite, and ensuring compliance with local laws before trading. OSL Bermuda Limited is licensed to conduct digital asset business by the Bermuda Monetary Authority.`;
+  const DIS_GLOBAL_ZH = `本公告仅供参考，不构成财务，投资或交易建议，亦不构成任何交易要约，推荐或招揽。OSL 不保证此处信息的准确性或完整性，且不对因使用此类信息而产生的任何后果承担责任。数字资产具有高度投机性和波动性，且可能在任何时间失去流动性；投资者需承担损失全部投资本金的风险。本公告所含信息可能并不适用于所有人，或在某些司法管辖区不受法律允许。在进行交易前，您有责任自行研究、评估自身的风险承受能力，并确保遵守当地法律法规。OSL Bermuda Limited获百慕达金融管理局授权经营数字资产业务。`;
+  const DIS_GLOBAL_TC = `本公告僅供參考，不構成財務，投資或交易建議，亦不構成任何交易要約，推薦或招攬。OSL 不保證此處信息的準確性或完整性，且不對因使用此類信息而產生的任何後果承擔責任。數字資產具有高度投機性和波動性，且可能在任何時間失去流動性；投資者需承擔損失全部投資本金的風險。本公告所含信息可能並不適用於所有人，或在某些司法管轄區不受法律允許。在進行交易前，您有責任自行研究，評估自身的風險承受能力，並確保遵守當地法律法規。OSL Bermuda Limited獲百慕達金融管理局授權經營數字資產業務。`;
+
+  const buildHTML = (lang) => {
+    const isEN = lang==='EN', isZH = lang==='ZH';
+    const dateStr = isEN ? fmtEN(listingIso) : fmtZH(listingIso);
+    const depSt   = isEN ? depEN : isZH ? depZH : depTC;
+    const chainNet = network ? ` (${network})` : '';
+    const pairsStr = pairs.length > 0 ? pairs.join(', ') : 'TBD';
+
+    let mainTitle, subTitle, greeting, intro, timeHeader, depLabel, dateLabel, pairsLabel, networkLine, aboutHeader, aboutText, learnMore, disHeader, disBody, aboutOSLHeader, aboutOSLBody;
+
+    if (isEN) {
+      mainTitle    = `【Global】New OTC Listing on OSL Global: ${sym}`;
+      subTitle     = `【EN】New OTC Listing on OSL Global: ${fullName} (${sym})`;
+      greeting     = 'Dear OSL Global Clients,';
+      intro        = `We are thrilled to announce the new listing of <strong>${fullName} (${sym})</strong>. <strong>${fullName} (${sym})</strong> trading is available on <strong>OTC</strong>.`;
+      timeHeader   = 'Listing Schedule:';
+      depLabel     = `<strong>Deposit and Withdrawal（${chainName}）:</strong> ${depSt}`;
+      dateLabel    = `<strong>Listing Time:</strong> ${dateStr}`;
+      pairsLabel   = pairs.length>0 ? `<strong>Trading Pairs (OTC):</strong> ${pairsStr}` : null;
+      networkLine  = `<p>${sym} deposits and withdrawals will be available via the <strong>${chainName}${chainNet}</strong> network.</p>`;
+      aboutHeader  = `<strong>About ${fullName} (${sym})</strong>`;
+      aboutText    = fAboutEN || '';
+      learnMore    = `<strong>Learn more about ${sym}:</strong>${fWebsite?` <a href="${fWebsite}">Website</a>`:' Website'}${fWhitepaper?` | <a href="${fWhitepaper}">Whitepaper</a>`:''}${fTwitter?` | <a href="${fTwitter}">Twitter(X)</a>`:''}`;
+      disHeader    = '<strong>Disclaimer:</strong>';
+      disBody      = `<p>${DIS_GLOBAL_EN}</p>`;
+      aboutOSLHeader = '<strong>About OSL Group</strong>';
+      aboutOSLBody   = `<p>${ABOUT_GLOBAL_EN}</p>`;
+    } else if (isZH) {
+      mainTitle    = `【SC】OSL Global 新币上线：${fullName} (${sym})`;
+      subTitle     = null;
+      greeting     = '亲爱的OSL Global客户，';
+      intro        = `我们很高兴地宣布OSL Global 新币上线：<strong>${fullName} (${sym})</strong>。<strong>${fullName} (${sym})</strong> 将在场外交易（<strong>OTC</strong>）开放。`;
+      timeHeader   = '上线时间安排：';
+      depLabel     = `<strong>充值和提现开放（${chainName}）:</strong> ${depSt}`;
+      dateLabel    = `<strong>上线时间：</strong>${dateStr}`;
+      pairsLabel   = pairs.length>0 ? `<strong>交易对（场外交易）：</strong>${pairsStr}` : null;
+      networkLine  = `<p>${sym}充值和提币可通过 <strong>${chainName}${chainNet}</strong> 网络进行。</p>`;
+      aboutHeader  = `<strong>关于${fullName} (${sym})</strong>`;
+      aboutText    = fAboutZH || '';
+      learnMore    = `了解更多关于${sym}的信息：${fWebsite?`<a href="${fWebsite}">网站</a>`:'网站'}${fWhitepaper?` | <a href="${fWhitepaper}">白皮书</a>`:''}${fTwitter?` | <a href="${fTwitter}">Twitter(X)</a>`:''}`;
+      disHeader    = '<strong>免责声明：</strong>';
+      disBody      = `<p>${DIS_GLOBAL_ZH}</p>`;
+      aboutOSLHeader = '<strong>关于OSL集团</strong>';
+      aboutOSLBody   = `<p>${ABOUT_GLOBAL_ZH}</p>`;
+    } else {
+      mainTitle    = `【TC】OSL Global 新幣上線：${fullName} (${sym})`;
+      subTitle     = null;
+      greeting     = '親愛的 OSL Global 用戶：';
+      intro        = `我們很高興地宣佈OSL Global 新幣上線：<strong>${fullName} (${sym})</strong>。<strong>${fullName} (${sym})</strong> 將在場外交易（<strong>OTC</strong>）開放。`;
+      timeHeader   = '上線時間安排：';
+      depLabel     = `<strong>充值和提現開放（${chainName}）:</strong> ${depSt}`;
+      dateLabel    = `<strong>上線時間：</strong>${dateStr}`;
+      pairsLabel   = pairs.length>0 ? `<strong>交易對(OTC)：</strong>${pairsStr}` : null;
+      networkLine  = `<p>${sym}充值和提幣可通過 <strong>${chainName}${chainNet}</strong> 網絡進行。</p>`;
+      aboutHeader  = `<strong>關於${fullName} (${sym})</strong>`;
+      aboutText    = fAboutTC || fAboutZH || '';
+      learnMore    = `瞭解更多關於${sym}的信息：${fWebsite?`<a href="${fWebsite}">網站</a>`:'網站'}${fWhitepaper?` | <a href="${fWhitepaper}">白皮書</a>`:''}${fTwitter?` | <a href="${fTwitter}">Twitter(X)</a>`:''}`;
+      disHeader    = '<strong>免責聲明：</strong>';
+      disBody      = `<p>${DIS_GLOBAL_TC}</p>`;
+      aboutOSLHeader = '<strong>關於OSL集團</strong>';
+      aboutOSLBody   = `<p>${ABOUT_GLOBAL_TC}</p>`;
+    }
+
+    const timelineItems = [depLabel, dateLabel, pairsLabel].filter(Boolean);
+
+    return `<div style="font-family:Arial,sans-serif;font-size:11pt;line-height:1.6;color:#000;">
+<p style="font-size:20pt;font-weight:bold;margin:0 0 8px;">${mainTitle}</p>
+${subTitle ? `<h2 style="font-size:16pt;font-weight:bold;margin:0 0 12px;">${subTitle}</h2>` : ''}
+<p>&nbsp;</p>
+<p><strong>${greeting}</strong></p>
+<p>${intro}</p>
+<p>&nbsp;</p>
+<p><strong>${timeHeader}</strong></p>
+<ul>${timelineItems.map(li=>`<li>${li}</li>`).join('')}</ul>
+<p>&nbsp;</p>
+${networkLine}
+<p>&nbsp;</p>
+<p>${aboutHeader}</p>
+${aboutText ? `<p>${aboutText}</p>` : ''}
+<p>${learnMore}</p>
+<p>&nbsp;</p>
+<p>${aboutOSLHeader}<br>${aboutOSLBody}</p>
+<p>&nbsp;</p>
+<p>${disHeader}<br>${disBody}</p>
+</div>`;
+  };
+
+  const copyLang = async (lang) => {
+    const html = buildHTML(lang);
+    try {
+      const blob = new Blob([html], { type: 'text/html' });
+      await navigator.clipboard.write([new ClipboardItem({ 'text/html': blob })]);
+    } catch(e) {
+      const el = document.createElement('div');
+      el.innerHTML = html; el.contentEditable = 'true';
+      Object.assign(el.style, { position:'fixed', top:'-9999px', left:'-9999px', opacity:'0' });
+      document.body.appendChild(el);
+      const range = document.createRange(); range.selectNodeContents(el);
+      window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+    setCopied(lang);
+    setTimeout(()=>setCopied(null), 2000);
+  };
+
+  const TABS = [
+    { id:'EN', label:'🇺🇸 English' },
+    { id:'ZH', label:'🇨🇳 简体中文' },
+    { id:'TC', label:'🇭🇰 繁體中文' },
+  ];
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:2000,display:'flex',alignItems:'stretch',justifyContent:'flex-end'}}>
+      <div style={{width:'min(780px,95vw)',background:'white',display:'flex',flexDirection:'column',boxShadow:'-8px 0 40px rgba(0,0,0,0.18)',animation:'slideInPanel 0.2s ease'}}>
+        <div style={{background:'#1A7A6E',padding:'14px 20px',display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
+          <div style={{flex:1}}>
+            <div style={{color:'white',fontWeight:800,fontSize:15}}>📢 三语上币公告 · Global OTC</div>
+            <div style={{color:'rgba(255,255,255,0.7)',fontSize:12,marginTop:2}}>{fullName} ({sym}) · {chainName} · 点击"一键复制"后可直接粘贴至 Outlook/Word</div>
+          </div>
+          <button onClick={()=>setShowEdit(v=>!v)} style={{background:'rgba(255,255,255,0.2)',border:'1px solid rgba(255,255,255,0.4)',color:'white',borderRadius:8,padding:'6px 12px',cursor:'pointer',fontSize:12,fontWeight:600}}>
+            ✏ {showEdit?'收起编辑':'编辑字段'}
+          </button>
+          <button onClick={onClose} style={{background:'rgba(255,255,255,0.15)',border:'none',color:'white',borderRadius:8,padding:'6px 14px',cursor:'pointer',fontSize:13}}>✕ 关闭</button>
+        </div>
+
+        {/* Editable fields panel */}
+        {showEdit && (
+          <div style={{background:'#F0FDF9',borderBottom:'2px solid #D4EFEC',padding:'14px 20px',flexShrink:0,overflowY:'auto',maxHeight:'45vh'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+              <div><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>代币全称</div>
+                <input value={fFullName} onChange={e=>setFFullName(e.target.value)} style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+              <div><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>代币符号</div>
+                <input value={fSym} onChange={e=>setFSym(e.target.value)} style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:10}}>
+              <div><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>链名称</div>
+                <input value={fChainName} onChange={e=>setFChainName(e.target.value)} style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+              <div><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>网络标识 (如ERC20)</div>
+                <input value={fNetwork} onChange={e=>setFNetwork(e.target.value.toUpperCase())} style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+              <div><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>上线时间</div>
+                <input type="datetime-local" value={fListingTime} onChange={e=>setFListingTime(e.target.value)} style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:11,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+            </div>
+            <div style={{display:'flex',gap:8,marginBottom:10}}>
+              {['Opened','Coming Soon'].map(opt=>(
+                <button key={opt} onClick={()=>setFDepStatus(opt)} style={{
+                  border:`1.5px solid ${fDepStatus===opt?'#1A7A6E':'#D1D5DB'}`,borderRadius:6,padding:'4px 12px',cursor:'pointer',fontSize:12,fontWeight:fDepStatus===opt?700:400,
+                  background:fDepStatus===opt?'#D4EFEC':'white',color:fDepStatus===opt?'#1A7A6E':'#374151',
+                }}>{opt}</button>
+              ))}
+              <div style={{fontSize:11,color:'#9CA3AF',alignSelf:'center'}}>充提状态</div>
+            </div>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>交易对（每行一个）</div>
+              <textarea value={fTradingPairs} onChange={e=>setFTradingPairs(e.target.value)} rows={2}
+                style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>
+            </div>
+            <div style={{marginBottom:10}}>
+              <div style={{display:'flex',gap:0,marginBottom:5}}>
+                {[['EN','关于(EN)'],['ZH','关于(简中)'],['TC','关于(繁中)']].map(([l,label])=>(
+                  <button key={l} onClick={()=>setFAboutLang(l)} style={{border:'1px solid #D1D5DB',borderRight:l==='TC'?'1px solid #D1D5DB':'none',
+                    borderRadius:l==='EN'?'6px 0 0 6px':l==='TC'?'0 6px 6px 0':'0',padding:'4px 10px',cursor:'pointer',fontSize:11,fontWeight:fAboutLang===l?700:400,
+                    background:fAboutLang===l?'#1A7A6E':'white',color:fAboutLang===l?'white':'#374151'}}>{label}</button>
+                ))}
+              </div>
+              {fAboutLang==='EN' && <textarea value={fAboutEN} onChange={e=>setFAboutEN(e.target.value)} rows={3}
+                style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>}
+              {fAboutLang==='ZH' && <textarea value={fAboutZH} onChange={e=>setFAboutZH(e.target.value)} rows={3}
+                style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>}
+              {fAboutLang==='TC' && <textarea value={fAboutTC} onChange={e=>setFAboutTC(e.target.value)} rows={3}
+                style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:12,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>}
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:12}}>
+              {[['官网',fWebsite,setFWebsite],['白皮书',fWhitepaper,setFWhitepaper],['Twitter',fTwitter,setFTwitter]].map(([lbl,val,set])=>(
+                <div key={lbl}><div style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:3}}>{lbl} URL</div>
+                  <input value={val} onChange={e=>set(e.target.value)} placeholder="https://" style={{width:'100%',border:'1.5px solid #D1D5DB',borderRadius:6,padding:'5px 8px',fontSize:11,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/></div>
+              ))}
+            </div>
+            {onUpdate && (
+              <button onClick={saveChanges} style={{background:saved?'#059669':'#1A7A6E',color:'white',border:'none',borderRadius:8,padding:'8px 24px',fontSize:13,cursor:'pointer',fontWeight:700,transition:'background 0.2s'}}>
+                {saved?'✓ 已保存！':'💾 保存更改'}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div style={{display:'flex',alignItems:'center',borderBottom:'2px solid #E5E7EB',padding:'0 20px',flexShrink:0,background:'#FAFAFA'}}>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{
+              border:'none',borderBottom:`3px solid ${tab===t.id?'#1A7A6E':'transparent'}`,
+              background:'transparent',padding:'12px 16px',cursor:'pointer',fontSize:13,
+              fontWeight:tab===t.id?700:400,color:tab===t.id?'#1A7A6E':'#6B7280',
+            }}>{t.label}</button>
+          ))}
+          <div style={{marginLeft:'auto',display:'flex',gap:8}}>
+            <button onClick={()=>copyLang(tab)} style={{
+              background: copied===tab?'#059669':'#1A7A6E',
+              color:'white',border:'none',borderRadius:8,padding:'7px 18px',fontSize:13,
+              fontWeight:700,cursor:'pointer',transition:'background 0.2s',
+            }}>{copied===tab?'✓ 已复制！':'📋 一键复制'}</button>
+            <button onClick={()=>{ TABS.forEach(t=>copyLang(t.id)); }} style={{
+              background:'white',color:'#374151',border:'1.5px solid #D1D5DB',borderRadius:8,
+              padding:'7px 14px',fontSize:12,cursor:'pointer',fontWeight:600,
+            }}>复制全部三语</button>
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:24}}>
+          <div style={{fontFamily:'Arial,sans-serif',fontSize:'11pt',lineHeight:1.7,color:'#111'}}
+            dangerouslySetInnerHTML={{__html: buildHTML(tab)}}/>
         </div>
       </div>
     </div>
@@ -1906,7 +2422,9 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
     <div>
       {/* Announcement overlay */}
       {showAnn && record.annFields && (
-        <AnnouncementView record={record} onClose={()=>setShowAnn(false)}/>
+        record.annFields.annType==='GlobalOTC'
+          ? <AnnouncementViewGlobal record={record} onClose={()=>setShowAnn(false)} onUpdate={onUpdate}/>
+          : <AnnouncementView record={record} onClose={()=>setShowAnn(false)} onUpdate={onUpdate}/>
       )}
       {/* Edit info modal */}
       {showEditModal && (
@@ -2325,6 +2843,7 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
   const [editingStepNote, setEditingStepNote] = useState(null);
   const [stepNoteVal, setStepNoteVal] = useState('');
   const [showCopyMenu, setShowCopyMenu] = useState(false);
+  const [showAnnPanel, setShowAnnPanel] = useState(false);
   const phaseRefs = React.useRef({});
 
   // Scroll to phase when triggered from table
@@ -2384,6 +2903,13 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
     <div style={{width:400,flexShrink:0,borderLeft:'2px solid #E5E7EB',display:'flex',flexDirection:'column',background:'white',overflow:'hidden'}}>
       <style>{`@keyframes slideInPanel{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}.panel-step:hover{background:#F8FAFC!important}`}</style>
 
+      {/* Announcement overlay from panel */}
+      {showAnnPanel && record.annFields && (
+        record.annFields.annType==='GlobalOTC'
+          ? <AnnouncementViewGlobal record={record} onClose={()=>setShowAnnPanel(false)} onUpdate={onUpdate}/>
+          : <AnnouncementView record={record} onClose={()=>setShowAnnPanel(false)} onUpdate={onUpdate}/>
+      )}
+
       {/* Header */}
       <div style={{padding:'12px 14px 10px',borderBottom:'1px solid #E5E7EB',flexShrink:0,background:ss.bg}}>
         <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:5}}>
@@ -2419,6 +2945,12 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
                 </div>
               )}
             </div>
+          )}
+          {record.annFields && (
+            <button onClick={()=>setShowAnnPanel(true)} title="查看三语公告"
+              style={{background:'rgba(0,0,0,0.08)',border:'none',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:11,color:ss.color,fontWeight:700,whiteSpace:'nowrap'}}>
+              📢 公告
+            </button>
           )}
           <button onClick={()=>onOpenFull(record.id)} title="打开完整视图"
             style={{background:'rgba(0,0,0,0.08)',border:'none',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:11,color:ss.color,fontWeight:700,whiteSpace:'nowrap'}}>
