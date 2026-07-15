@@ -176,15 +176,19 @@ function buildChecklist(site, product, tokenType, opts={}) {
   // EXECUTION — Global RFQ/OTC
   if (site==='Global' && (product==='RFQ'||product==='OTC')) {
     add('执行配置','exec','发起 Lark 上币审批流 + 提供配置表','Listing Ops','Freya Yu / Rebeca Zhang','发起时','附上 Global站上币上链配置表。同步转发到上币核心排期群');
-    add('执行配置','exec','流动性审核（SG / Global）','SG/Global Trader',product==='RFQ'?'SG: Qiyuan Ng\nGlobal: Josiah Choong / Rongyao Lim':'Josiah Choong / Rongyao Lim','1天','SG站评估钱包类型：默认3PC，大额底仓考虑HSM（trader评估）',true);
     add('执行配置','exec','准备上币参数（填写配置表）','Listing Ops','Rebeca Zhang','半天','填写 Global站上币上链配置表（币种参数共享文档）');
     add('执行配置','exec','币种信息参数配置（国际站财务后台）','Listing Ops','Rebeca Zhang','半天','URL: https://web-admin-finance-prod.glb.osl-nucleus.com/\n包含：KYT配置（Betty Nie）+ 风控配置（Michael Xu）');
     add('执行配置','exec','钱包 + 安全配置','钱包/安全','Huaxi Li / Richard Yang','1–2天','Fireblocks安全权限配置：@Richard Yang');
     add('执行配置','exec','币种启用（灰度状态）','Listing Ops','Rebeca Zhang','半天','钱包完成后，在币种配置中"启用"币种，发布apollo。默认灰度状态，仅白名单可见');
     add('执行配置','exec','配置灰度白名单','Listing Ops','Rebeca Zhang / Freya Yu','半天','在灰度中添加：钱包验证组 + 交易验证组的白名单');
-    add('执行配置','exec','交易对排期（产品Approve）','产品','Irene Li','1天','RFQ和OTC均由Irene Li排期并Approve');
-    if (product==='RFQ')
-      add('执行配置','exec','底仓配资（RFQ专属）','Trade Ops / Global Trader','Chris Cheng / Hetty Li\nJosiah Choong','1天','各站分别申请风险信用额度，Trade Ops执行底仓账户配置。前置：Henry Tam确认trading资金到位');
+    if (product==='RFQ') {
+      add('执行配置','exec','提交 Lark 执行审批：RFQ/OTC上币执行审批','Listing Ops','Eyang / Freya Yu / Yaode Zhang','配置前','在 Lark 发起【RFQ/OTC上币执行审批】审批流，审批通过后方可进行后续配置步骤。\n① 进入 Lark 审批中心，选择「RFQ/OTC上币执行审批」\n② 填写币种、交易对、预期上线时间等信息\n③ 提交后等待审批通过\n④ 截图留存后推进下一步',true);
+      add('执行配置','exec','Ziyao Xu 配置流动性','Global Trader / 流动性','Ziyao Xu','1天','由 Ziyao Xu 负责配置 RFQ 流动性参数。配置完成后通知 Listing Ops 确认',true);
+      add('执行配置','exec','Yi Wei Cheong 确认资金 + Hetty Li 配置底仓','Trade Ops','Yi Wei Cheong → Hetty Li','1天','① Yi Wei Cheong 确认有足够资金可用于底仓配置\n② 确认到位后，通知 Hetty Li 进行底仓账户配置\n③ Hetty Li 完成配置后截图留存',true);
+      add('执行配置','exec','后台配置交易对','Listing Ops','Eyang / Yaode Zhang / Freya Yu','配置当天','由 Eyang、Yaode Zhang 或 Freya Yu 在后台完成 RFQ 交易对配置。\n① 登录 Global 后台\n② 配置交易对参数\n③ 验证配置正确后确保交易对为"closed"状态（等正式上线再开启）',true);
+    }
+    if (product==='OTC')
+      add('执行配置','exec','交易对排期（产品Approve）','产品','Irene Li','1天','OTC由Irene Li排期并Approve');
     if (product==='RFQ' && stableHub) {
       add('执行配置','exec','【StableHub】确认币种参数','Listing Ops / 产品','Henry Wong','配置前确认','向 @Henry Wong 确认币种参数（Token-level parameters），包括币种基础信息、精度等配置',true);
       add('执行配置','exec','【StableHub】确认币对参数','Listing Ops / 产品','Anduin Lothar / Jian Pan','配置前确认','向 @Anduin Lothar 或 @Jian Pan 确认币对参数（Pair-level parameters），包括限额规则、精度、交易对配置等',true);
@@ -245,8 +249,25 @@ function buildChecklist(site, product, tokenType, opts={}) {
 
   // EXECUTION — 仅上链（所有站点）
   if (product==='ChainOnly') {
-    add('执行配置','exec','钱包币种/链参数配置','钱包','Huaxi Li','1–2天','配置该链/币种的钱包参数，完成后即可进入白名单测试阶段',true);
-    add('执行配置','exec','加白名单做充提测试','Listing Ops / 钱包','Eyang / Huaxi Li','钱包配置完成后','在系统后台将内部测试账号加入白名单，进行充值和提现功能验证。\n① 将测试账号加入充提白名单\n② 执行充值测试（小额到账确认）\n③ 执行提现测试（确认链上到账）\n④ 测试通过后再进入正式上线流程',true);
+    add('执行配置','exec','提 Lark 审批：参数新增/调整审批','Listing Ops','Eyang','配置前','在 Lark 发起【参数新增/调整审批 Parameters Change Request】审批流，审批通过后方可进行后续钱包参数配置。\n① 进入 Lark 审批中心，选择「参数新增/调整审批 Parameters Change Request」\n② 填写币种、链、参数变更内容等信息\n③ 提交后等待审批通过\n④ 审批通过截图留存，再推进下一步',true);
+
+    if (site==='HK' || site==='SG') {
+      // ── HK / SG 新链上币详细流程 ──
+      add('执行配置','exec','【D-3】Listing Ops 提供上币参数','Listing Ops','Yiyang Lu / Yaode Xie (Teddy)','需求启动时','提供完整上币参数供研发团队准备提单，包括：\n• 币种名称、Symbol\n• 区块链 / 链名称\n• 代币合约地址\n• 链上精度（Decimals）\n• CoinGecko 链接\n• 代币类型（新链 or 子代币）',true);
+      add('执行配置','exec','【D-3】研发提单准备 — 钱包侧','钱包研发','Pine Sun','需求启动后','钱包侧完成提单准备：新链/币种接入所需的钱包配置工作，准备好后等待审核',true);
+      add('执行配置','exec','【D-3】研发提单准备 — 平台侧 + Setting limit 准备','平台研发','Spirit Zhang / Joe Beam / Haibo Liu','需求启动后','① 平台侧完成提单准备\n② 同步完成管理后台 Setting limit 配置准备\n\n前置依赖：\n• TradeOps（Hetty Li / Dicky Lam / Roxanne Mak）提供 Tier limit 表格及参数逻辑\n• WalletOps（Louis Chan / Ryan Chan / Bryan Yu）提供 Limit setting for wallet transfer 表格及参数逻辑',true);
+      add('执行配置','exec','【D-3】TradeOps + WalletOps 提供 Limit 参数','Trade Ops / Wallet Ops','Hetty Li / Dicky Lam / Roxanne Mak（TradeOps）\nLouis Chan / Ryan Chan / Sophie Qin / Cyrus Leung / Bryan Yu / Sky Ng（WalletOps）','需求启动后，与研发提单同步进行','① TradeOps 提供 Tier limit 表格和具体参数逻辑 → 给平台 Spirit Zhang\n② WalletOps 提供 Limit setting for wallet transfer 表格和具体参数逻辑 → 给平台 Spirit Zhang\n③ 以上为平台侧 Setting limit 准备的必要前置输入',true);
+      add('执行配置','exec','【D-2】研发提单审核 + 生产配置 — 钱包侧','钱包研发','Pine Sun','提单准备完成后','钱包侧完成提单审核，并在生产环境执行钱包配置',true);
+      add('执行配置','exec','【D-2】研发提单审核 + 生产配置 — 平台侧','平台研发','Spirit Zhang / Joe Beam / Haibo Liu','提单准备完成后','平台侧完成提单审核，并在生产环境完成币种 / Setting limit 配置',true);
+      add('执行配置','exec','【D-2】测试同步 Test Plan + Yiyang 准备测试币','测试 / Listing Ops','Zhengfan Wang / Perry Zheng（测试计划）\nYiyang Lu（测试币）','生产配置完成后','① 测试团队将 Test Plan 同步给交易运营和钱包运营团队\n② Yiyang Lu 协调 USDGO 测试币资源，打到测试人员对应钱包里',true);
+      add('执行配置','exec','【D-1】生产验证 + Limit setting 配置完成','测试 / Trade Ops / Wallet Ops','Zhengfan Wang / Perry Zheng（生产验证）\nHetty Li / Dicky Lam / Roxanne Mak / Louis Chan / Ryan Chan / Sophie Qin / Cyrus Leung / Bryan Yu / Sky Ng（Limit setting）','生产验证阶段','① 测试团队介入生产验证，确认链路正常\n② TradeOps + WalletOps 完成所有 Limit setting 配置\n③ 验证通过后同步 Listing Ops（Yiyang）',true);
+      add('正式上线','launch','【上线当天】划转 + 充提验证','Trade Ops / Wallet Ops','Hetty Li / Dicky Lam / Roxanne Mak / Louis Chan / Ryan Chan / Sophie Qin / Cyrus Leung / Bryan Yu / Sky Ng','上线当天','TradeOps + WalletOps 完成划转及提现验证：\n① 执行充值划转测试\n② 执行提现验证（确认链上到账）\n③ 全部通过后通知 Listing Ops 开启充提全量开关',true);
+    } else {
+      // ── 其他站点（Global 等）通用流程 ──
+      add('执行配置','exec','钱包币种/链参数配置','钱包','Huaxi Li','1–2天','配置该链/币种的钱包参数，完成后即可进入白名单测试阶段',true);
+      add('执行配置','exec','加白名单做充提测试','Listing Ops / 钱包','Eyang / Huaxi Li','钱包配置完成后','在系统后台将内部测试账号加入白名单，进行充值和提现功能验证。\n① 将测试账号加入充提白名单\n② 执行充值测试（小额到账确认）\n③ 执行提现测试（确认链上到账）\n④ 测试通过后再进入正式上线流程',true);
+    }
+
     add('正式上线','launch','去掉白名单（开充提前必做）','Listing Ops','Eyang / Rebeca Zhang','开充提前','⚠️ 开启充提全量开关前，必须先将白名单限制移除，否则普通用户无法正常充提。\n① 在系统后台移除充提白名单配置\n② 确认白名单已清空\n③ 完成后再执行下一步"开启充提全量开关"',true);
     add('正式上线','launch','开启充提全量开关','Listing Ops','Rebeca Zhang','移除白名单后','确认白名单已移除后，打开充提全量开关。充提开关打开后即完成，无需交易对配置',true);
   }
