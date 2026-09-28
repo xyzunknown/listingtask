@@ -82,6 +82,21 @@ const CHAINS = [
   { id:'APT',   label:'Aptos',       tag:'APT'    },
 ];
 
+// ─── 变动审批配置（通用框架，可扩展到其他变动类型）─────────────────────────────
+// 设计：统一入口 + 按变动类型分级路由。目前落地 HK 上币；预留参数调整/下币等扩展位。
+const CHANGE_APPROVALS = {
+  hk_listing: {
+    label: '香港站上币 · 合规审批',
+    tier: 1,                                            // Tier 1 重大变动
+    mode: 'parallel',                                   // 并行会签（同时收到，不排队）
+    signPolicy: 'all',                                  // 全部主动签字
+    approvers: ['Eugene', 'George', 'Henry', 'Terence', 'Jason'],
+  },
+  // ── 预留扩展位（以后按需启用）──
+  // hk_param_change: { label:'香港站参数调整', tier:2, mode:'parallel', signPolicy:'all', approvers:['George','Jason'] },
+  // hk_delisting:    { label:'香港站下币',    tier:1, mode:'parallel', signPolicy:'all', approvers:['Eugene','George','Henry','Terence','Jason'] },
+};
+
 // ─── Checklist builder ───────────────────────────────────────────────────────
 function buildChecklist(site, product, tokenType, opts={}) {
   const nc = tokenType === 'newchain';
@@ -119,6 +134,12 @@ function buildChecklist(site, product, tokenType, opts={}) {
       add('合规/VAAP','compliance','（HK专属）SFC 上报通知','合规','Henry Tsang / Sophie Ma','上线前完成','必须在上线前发送，向Sophie Ma确认已经发送',true);
       add('合规/VAAP','compliance','（HK专属）准备产品披露内容，测试前由 Scarlett Zhang 发布','合规','Scarlett Zhang','VAAP期间准备，测试前发布','过VAAP时内容已准备好，Scarlett Zhang 在测试开始前确认发布即可。\n⚠ 测试前必须先发布，不能等到正式上线后才提。\n发布页面：https://trade-hk.osl.com/pages/productDisclosure\n（页面技术更新：Rebeca Zhang 给 Jim Ball 提 K-02 单）',true);
       add('合规/VAAP','compliance','（HK零售专属）Indices 合资格指数核查','研究院','Scarlett Zhang','月度维护','HK零售资产需确认被至少2家独立指数提供商收录，其中1家需有传统证券市场指数发布经验');
+
+      // ── 合规审批闸门（5人并行会签，每人主动签字）──
+      const ap = CHANGE_APPROVALS.hk_listing;
+      add('合规/VAAP','compliance','🔒 合规审批闸门（'+ap.approvers.length+'人并行会签）','合规审批组',ap.approvers.join(' / '),'各审批人主动签字',
+        '⚠️ 合规要求：本次上币变动需以下 '+ap.approvers.length+' 人并行会签，每人各自主动签字：\n'+ap.approvers.map(n=>'• '+n).join('\n')+'\n\n规则：并行（同时收到，不排队）+ 全签（每人都要点"签字"）。\n五人全部签字后本闸门才算通过，方可进入执行配置。\n\n（此为通用「香港站变动审批」框架的上币分支，后续可扩展参数调整、下币等变动类型）',
+        true, 'approval', 'hk_change_approval', ap.approvers);
     }
   }
 
@@ -265,6 +286,13 @@ function buildChecklist(site, product, tokenType, opts={}) {
     } else {
       // ── 其他站点（Global 等）通用流程 ──
       add('执行配置','exec','钱包币种/链参数配置','钱包','Huaxi Li','1–2天','配置该链/币种的钱包参数，完成后即可进入白名单测试阶段',true);
+
+      if (site==='Global' && nc) {
+        // ── Global 新链专属：TradeOps 底仓准备 ──
+        add('执行配置','exec','TradeOps 准备链上底仓（新链专属）','Trade Ops','Oscar（主要负责）/ Roxanne Mak / Dicky Lam','与钱包配置同步进行','遇到新链上线，TradeOps 需提前准备该链的链上底仓（Gas Fee / 初始资金），确保后续充提测试及正式交易有底仓支持。\nGlobal 底仓主要由 Oscar 负责，Roxanne Mak / Dicky Lam 协同配合。',true);
+        add('执行配置','exec','向财务申请底仓资金','Trade Ops / 财务','Oscar → 财务团队','底仓准备阶段，链上底仓配置前完成','Oscar 向财务提交底仓资金申请，资金到账后交由 TradeOps 完成底仓配置。\n⚠️ 如本次上线涉及 SG（新加坡站）相关业务，财务申请需改为联系 Yi Wei Cheong，而非默认财务对接人。',true);
+      }
+
       add('执行配置','exec','加白名单做充提测试','Listing Ops / 钱包','Eyang / Huaxi Li','钱包配置完成后','在系统后台将内部测试账号加入白名单，进行充值和提现功能验证。\n① 将测试账号加入充提白名单\n② 执行充值测试（小额到账确认）\n③ 执行提现测试（确认链上到账）\n④ 测试通过后再进入正式上线流程',true);
     }
 
@@ -2402,6 +2430,19 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
     setEditingStepNote(null);
   };
 
+  // ── 审批签字：切换某审批人的签字状态；全签齐则自动勾选该步骤 ──
+  const toggleApproval = (inputKey, name, approvers, stepIdx) => {
+    const allAppr = record.approvals || {};
+    const cur = {...(allAppr[inputKey] || {})};
+    if (cur[name]) delete cur[name];
+    else cur[name] = new Date().toISOString();
+    const newApprovals = {...allAppr, [inputKey]: cur};
+    const allSigned = approvers.every(n => cur[n]);
+    const newChecked = {...checked, [stepIdx]: allSigned};
+    const msg = allSigned ? '🔓 合规审批全部签字完成，闸门已通过' : (cur[name] ? ('✍️ '+name+' 已签字') : ('↩ '+name+' 撤销签字'));
+    onUpdate({...record, approvals:newApprovals, checked:newChecked, updatedAt:new Date().toISOString()}, msg);
+  };
+
   const stepFields = record.stepFields || {};
   const setStepField = (inputKey, value, stepIdx) => {
     const newFields = {...stepFields, [inputKey]: value};
@@ -2436,11 +2477,22 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
     cur.steps.push({...step,idx:i});
   });
 
+  // Group by team/owner (parallel lanes) — same steps, grouped by who's doing them
+  const [viewMode, setViewMode] = useState('phase'); // 'phase' | 'team'
+  const laneOrder = [];
+  const laneMap = {};
+  checklist.forEach((step,i)=>{
+    const key = step.owner || '其他';
+    if (!laneMap[key]) { laneMap[key] = []; laneOrder.push(key); }
+    laneMap[key].push({...step, idx:i});
+  });
+  const lanes = laneOrder.map(owner => ({ owner, steps: laneMap[owner] }));
+
   const siteInfo = SITES.find(s=>s.id===record.site);
   const prodInfo = PRODUCTS.find(p=>p.id===record.product);
 
   return (
-    <div>
+    <div style={{height:'100%', overflowY:'auto'}}>
       {/* Announcement overlay */}
       {showAnn && record.annFields && (
         record.annFields.annType==='GlobalOTC'
@@ -2597,8 +2649,61 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
           )}
         </div>
 
+        {/* View mode toggle */}
+        <div style={{display:'flex', gap:6, marginBottom:12}}>
+          <button onClick={()=>setViewMode('phase')} style={{
+            border:'1.5px solid '+(viewMode==='phase'?C.navy:'#E5E7EB'), background:viewMode==='phase'?C.navy:'white',
+            color:viewMode==='phase'?'white':'#374151', borderRadius:8, padding:'6px 14px', fontSize:12, fontWeight:700, cursor:'pointer'}}>
+            📋 阶段视图
+          </button>
+          <button onClick={()=>setViewMode('team')} style={{
+            border:'1.5px solid '+(viewMode==='team'?C.navy:'#E5E7EB'), background:viewMode==='team'?C.navy:'white',
+            color:viewMode==='team'?'white':'#374151', borderRadius:8, padding:'6px 14px', fontSize:12, fontWeight:700, cursor:'pointer'}}>
+            🏊 团队视图（并行泳道）
+          </button>
+        </div>
+
+        {/* Team lanes view — group by owner, show each team's progress in parallel */}
+        {viewMode==='team' && (
+          <div style={{background:'white', borderRadius:14, padding:'16px 18px', marginBottom:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)'}}>
+            {lanes.map(({owner, steps})=>{
+              const doneCount = steps.filter(s=>checked[s.idx]||naSteps[s.idx]).length;
+              const currentStep = steps.find(s=>!checked[s.idx] && !naSteps[s.idx]);
+              const laneComplete = doneCount===steps.length;
+              return (
+                <div key={owner} style={{marginBottom:16}}>
+                  <div style={{display:'flex', alignItems:'baseline', gap:8, marginBottom:7, flexWrap:'wrap'}}>
+                    <span style={{fontSize:13, fontWeight:700, color:laneComplete?'#059669':'#111827'}}>{laneComplete?'✅ ':''}{owner}</span>
+                    <span style={{fontSize:11, color:'#9CA3AF'}}>{doneCount}/{steps.length}</span>
+                    {currentStep && <span style={{fontSize:11, color:'#2E75B6', fontWeight:600}}>· 等 {currentStep.contact}</span>}
+                  </div>
+                  <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                    {steps.map(s=>{
+                      const isDone = !!checked[s.idx];
+                      const isNA = !isDone && !!naSteps[s.idx];
+                      const isCurrent = !!currentStep && s.idx===currentStep.idx;
+                      return (
+                        <span key={s.idx}
+                          onClick={()=>{ if(s.inputType==='approval'){ addToast&&addToast('该步骤需由审批人逐一签字，不能手动勾选'); return; } toggle(s.idx); }}
+                          title={s.task + (s.contact?(' · '+s.contact):'')}
+                          style={{fontSize:12, padding:'6px 11px', borderRadius:8, cursor:'pointer',
+                            background:isDone?'#D1FAE5':isNA?'#F3F4F6':isCurrent?'#EBF4FB':'white',
+                            color:isDone?'#059669':isNA?'#9CA3AF':isCurrent?'#1D4ED8':'#6B7280',
+                            border:'1.5px solid '+(isDone?'#86EFAC':isNA?'#E5E7EB':isCurrent?'#93C5FD':'#E5E7EB'),
+                            fontWeight:isCurrent?700:400, textDecoration:isNA?'line-through':'none'}}>
+                          {isDone?'✓ ':''}{s.task}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Phase groups */}
-        {phases.map((phase,pi)=>{
+        {viewMode==='phase' && phases.map((phase,pi)=>{
           const pc = PHASE_COLORS[phase.tag]||PHASE_COLORS.exec;
           const pd = phase.steps.filter(s=>checked[s.idx]).length;
           return (
@@ -2622,7 +2727,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
                     borderRadius:10, marginBottom:8, overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', transition:'all 0.15s'}}>
                     <div style={{display:'flex', alignItems:'flex-start', padding:'11px 14px', gap:10}}>
                       {/* Done checkbox */}
-                      <div onClick={()=>toggle(step.idx)} style={{width:22,height:22,borderRadius:6,
+                      <div onClick={()=>{ if(step.inputType==='approval'){ addToast&&addToast('该步骤需由审批人逐一签字，不能手动勾选'); return; } toggle(step.idx); }} style={{width:22,height:22,borderRadius:6,
                         border:'2px solid '+(isDone?'#22C55E':'#D1D5DB'),
                         background:isDone?'#22C55E':'white', display:'flex',alignItems:'center',justifyContent:'center',
                         flexShrink:0, marginTop:2, cursor:'pointer', transition:'all 0.15s'}}>
@@ -2667,6 +2772,40 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
                             })}
                           </div>
                         )}
+                        {/* Approval sign-off for inputType=approval */}
+                        {step.inputType==='approval' && !isNA && (()=>{
+                          const signed = (record.approvals||{})[step.inputKey] || {};
+                          const approvers = step.inputOptions||[];
+                          const nSigned = approvers.filter(n=>signed[n]).length;
+                          return (
+                            <div style={{marginTop:8}} onClick={e=>e.stopPropagation()}>
+                              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                                <span style={{fontSize:12,fontWeight:700,color:nSigned===approvers.length?'#059669':'#B45309'}}>
+                                  并行会签 {nSigned}/{approvers.length}
+                                </span>
+                                <div style={{flex:1,height:5,background:'#E5E7EB',borderRadius:99,overflow:'hidden'}}>
+                                  <div style={{width:(approvers.length?nSigned/approvers.length*100:0)+'%',height:'100%',background:nSigned===approvers.length?'#059669':'#F59E0B',transition:'width 0.2s'}}/>
+                                </div>
+                                {nSigned===approvers.length && <span style={{fontSize:11,fontWeight:700,color:'#059669'}}>🔓 已通过</span>}
+                              </div>
+                              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                                {approvers.map(name=>{
+                                  const at = signed[name];
+                                  return (
+                                    <button key={name} onClick={()=>toggleApproval(step.inputKey,name,approvers,step.idx)}
+                                      title={at?('已签字：'+new Date(at).toLocaleString('zh-CN')):'点击签字'}
+                                      style={{display:'flex',alignItems:'center',gap:5,fontSize:12,padding:'5px 11px',borderRadius:99,cursor:'pointer',
+                                        border:`1.5px solid ${at?'#22C55E':'#D1D5DB'}`,background:at?'#F0FDF4':'white',
+                                        color:at?'#15803D':'#374151',fontWeight:at?700:500}}>
+                                      <span>{at?'✅':'⭕'}</span>{name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <div style={{fontSize:11,color:'#9CA3AF',marginTop:5}}>每人各自点击签字；五人全签齐后闸门自动通过</div>
+                            </div>
+                          );
+                        })()}
                         {!step.inputType && <div style={{display:'flex',gap:12,marginTop:4,flexWrap:'wrap'}}>
                           <span style={{fontSize:12,color:'#4B5563'}}>👤 {step.owner}</span>
                           <span style={{fontSize:12,color:'#2E75B6',fontWeight:600}}>📞 {step.contact}</span>
@@ -2891,6 +3030,13 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
     const newNA = nowDone ? {...naSteps, [idx]:false} : naSteps;
     onUpdate({...record, checked:newChecked, naSteps:newNA, updatedAt:new Date().toISOString()});
   };
+  const toggleApproval = (inputKey, name, approvers, stepIdx) => {
+    const allAppr = record.approvals || {};
+    const cur = {...(allAppr[inputKey] || {})};
+    if (cur[name]) delete cur[name]; else cur[name] = new Date().toISOString();
+    const allSigned = approvers.every(n => cur[n]);
+    onUpdate({...record, approvals:{...allAppr,[inputKey]:cur}, checked:{...checked,[stepIdx]:allSigned}, updatedAt:new Date().toISOString()});
+  };
   const toggleNA = (idx) => {
     const nowNA = !naSteps[idx];
     const newNA = {...naSteps, [idx]: nowNA};
@@ -3035,8 +3181,8 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
                     style={{borderBottom:'1px solid #F9FAFB',background:isDone?'#F0FDF4':isNA?'#FAFAFA':'white',opacity:isCancelled?0.6:1}}>
                     <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 14px'}}>
                       {/* Done checkbox */}
-                      <div onClick={()=>!isCancelled&&toggle(step.idx)}
-                        style={{width:17,height:17,borderRadius:4,flexShrink:0,cursor:isCancelled?'default':'pointer',
+                      <div onClick={()=>{ if(isCancelled)return; if(step.inputType==='approval')return; toggle(step.idx); }}
+                        style={{width:17,height:17,borderRadius:4,flexShrink:0,cursor:isCancelled||step.inputType==='approval'?'default':'pointer',
                           border:isDone?'none':'1.5px solid #D1D5DB',background:isDone?'#059669':'white',
                           display:'flex',alignItems:'center',justifyContent:'center'}}>
                         {isDone && <span style={{color:'white',fontSize:10,lineHeight:1}}>✓</span>}
@@ -3074,6 +3220,31 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
                             ))}
                           </div>
                         )}
+                        {/* Approval sign-off (compact) */}
+                        {step.inputType==='approval' && !isNA && (()=>{
+                          const signed = (record.approvals||{})[step.inputKey] || {};
+                          const approvers = step.inputOptions||[];
+                          const nSigned = approvers.filter(n=>signed[n]).length;
+                          return (
+                            <div style={{marginTop:3}} onClick={e=>e.stopPropagation()}>
+                              <div style={{fontSize:10,fontWeight:700,color:nSigned===approvers.length?'#059669':'#B45309',marginBottom:3}}>会签 {nSigned}/{approvers.length}{nSigned===approvers.length?' 🔓已通过':''}</div>
+                              <div style={{display:'flex',gap:3,flexWrap:'wrap'}}>
+                                {approvers.map(name=>{
+                                  const at=signed[name];
+                                  return (
+                                    <button key={name} onClick={()=>!isCancelled&&toggleApproval(step.inputKey,name,approvers,step.idx)}
+                                      title={at?('已签字：'+new Date(at).toLocaleString('zh-CN')):'点击签字'}
+                                      style={{fontSize:10,padding:'2px 7px',borderRadius:99,cursor:isCancelled?'default':'pointer',
+                                        border:`1px solid ${at?'#22C55E':'#D1D5DB'}`,background:at?'#F0FDF4':'white',
+                                        color:at?'#15803D':'#374151',fontWeight:at?700:400}}>
+                                      {at?'✅':'⭕'} {name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         {step.owner&&!step.inputType&&<div style={{fontSize:10,color:'#9CA3AF',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{step.owner}</div>}
                       </div>
                       {/* N/A */}
