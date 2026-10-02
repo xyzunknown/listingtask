@@ -4968,11 +4968,11 @@ function digestToText(d) {
   }
   return L.join('\n');
 }
-// 调 Supabase Edge Function 让 AI 把结构化数据写成成段周报（key 存在服务端）
+// 调 Vercel Serverless Function 让 AI 把结构化数据写成成段周报（GEMINI_API_KEY 存在 Vercel 环境变量里）
 async function generateAIWeekly(digest) {
-  const res = await fetch(SUPABASE_URL + '/functions/v1/weekly-report', {
+  const res = await fetch('/api/weekly-report', {
     method: 'POST',
-    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+    headers: { 'Content-Type':'application/json' },
     body: JSON.stringify({ digest }),
   });
   if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0,200));
@@ -5392,7 +5392,7 @@ function TaskBoardView({ addToast }) {
                   </div>
                   {aiErr
                     ? <div style={{fontSize:12, color:'#2D2D2D', background:'#F7C8D4', border:'2px solid #2D2D2D', borderRadius:14, padding:'8px 10px'}}>
-                        生成失败：{aiErr}　<br/>如果还没部署 Edge Function，可以先用「📋 复制清单」。
+                        生成失败：{aiErr}　<br/>如果提示未配置 GEMINI_API_KEY，请到 Vercel 项目 Settings → Environment Variables 添加后重新部署；也可以先用「📋 复制清单」。
                       </div>
                     : <div style={{fontSize:13, color:'#2D2D2D', whiteSpace:'pre-wrap', lineHeight:1.8}}>{aiText}</div>}
                 </div>
