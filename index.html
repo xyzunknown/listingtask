@@ -162,8 +162,51 @@ const CHANGE_APPROVALS = {
   // hk_delisting:    { label:'香港站下币',    tier:1, mode:'parallel', signPolicy:'all', approvers:['Eugene','George','Henry','Terence','Jason'] },
 };
 
+// ─── 公告模板库：免责声明 + OSL 介绍 ────────────────────────────────────────
+// 法务更新文案时在「📑 公告模板」里改一次，所有公告自动用新的。
+// DS = OSL Digital Securities = 香港站；Global/印尼站用 OSL 集团那一套。
+const ANN_TPL_LOCAL_KEY = 'ann_templates_v1';
+const ANN_TPL_DEFAULT = {
+  HK: {
+    EN: { dis1: `This content is provided by OSL Digital Securities Limited (“OSLDS”) solely for informational purposes and does not constitute, nor shall it be construed as, an offer, solicitation, or recommendation to purchase, sell, or subscribe to any securities, financial instruments, products, or services. This content does not constitute legal, tax, accounting, or financial advice, and recipients are advised to obtain independent professional advice prior to making any decisions or taking any action.\\nOSLDS makes no representations or warranties, express or implied, as to the accuracy, completeness, or reliability of the information contained herein and disclaims all liability for any losses or damages arising from its use. Where third-party data or information is referenced, OSLDS makes no representation or endorsement as to the accuracy, completeness, or reliability of such data. All opinions, estimates, and information are as of the date hereof and may be subject to change without notice.`, dis2: `<For the avoidance of doubt, this announcement is strictly intended for Professional Investors (as defined under the Securities and Futures Ordinance (Cap. 571) and its subsidiary legislation) and is not intended for distribution to, or use by, any person in any jurisdiction where such distribution or use would be contrary to applicable laws or regulations. It is the responsibility of any person who accesses this announcement to observe all applicable laws and regulations of their relevant jurisdiction.> Virtual assets involve significant risks. Please ensure you fully understand these risks before engaging in any trading activities. OSLDS shall not be liable for any losses arising from the use of or reliance on this announcement.`, about: `As a subsidiary of the publicly listed OSL Group (HKEX: 863.HK), OSL Digital Securities is Hong Kong’s first and most established SFC-licensed and insured digital asset platform. Operating since 2018, the platform provides institutional-grade digital asset services to corporations, financial institutions, professional and retail investors.\\nOSL Hong Kong delivers services across five core domains: OTC brokerage, Omnibus broker solutions, custody, wealth management, and retail services. The OTC brokerage services provide 24/7 high-liquidity crypto trading with fiat on/off-ramp services. Custody solutions feature client-asset segregated wallet management backed by US$1 billion insurance coverage. The wealth management suite offers crypto investments to traditional investors, including tokenised treasuries, RWAs, structured crypto products, and quant investment strategies. Retail services bring institution-grade security and crypto access to professional and retail investors.\\nAs a pioneer in bridging traditional finance and the digital asset economy, OSL Group adheres to its core concept: Open, Secure, and Licensed, empowering the next generation of global financial infrastructure. In addition to Hong Kong, OSL Group expands operations under full regulatory compliance in Japan, Australia, Europe and beyond.` },
+    SC: { dis1: `本内容由 OSL数字证券有限公司（“OSLDS”） 提供，仅供参考之用，不构成亦不应被视为购买、出售或认购任何证券、金融工具、产品或服务的要约、邀请或推荐。本内容不构成法律、税务、会计或财务建议，收件人应在做出任何决定或采取任何行动前，寻求独立的专业意见。OSLDS 对本内容的准确性、完整性或可靠性不作任何明示或暗示的陈述或保证，并对因使用本内容而产生的任何损失或损害不承担任何责任。若引用第三方数据或信息，OSLDS 对该等数据的准确性、完整性或可靠性不作任何陈述或认可。本免责声明所载的所有观点、估算及信息均截至本声明日期，并可能随时变更，恕不另行通知。`, dis2: `<为避免产生歧义，本公告仅面向专业投资者（定义见《证券及期货条例》（第 571 章）及其附属法例），并不拟向任何在其所属司法辖区内分发或使用本公告即构成违反适用法律或法规的个人或实体提供。任何查阅本公告的人士，均有责任遵守其所在司法辖区的所有适用法律及法规。>数字资产涉及重大风险，请在参与任何交易活动前充分了解相关风险。OSLDS 对因使用或依赖本公告而产生的任何损失概不承担责任。`, about: `OSL数字证券为OSL集团（863.HK）旗下的子公司，是香港首家获证监会发牌且受保的数字资产交易平台，自2018年起，平台专注为企业客户、金融机构、专业及个人投资者提供机构级金融解决方案。OSL香港提供五大核心服务：经纪业务、综合账户方案、资产托管、财富管理及交易所服务。其中经纪业务提供24小时高流动性加密货币交易及法币出入金服务；托管方案采用客户资产隔离的独立钱包管理，并提供10亿美元保险保障；财富管理包含代币化国债等创新投资产品；同时专业及零售投资者亦可透过交易所安全合规买卖加密货币。作为连接传统金融与数字资产经济的先驱，OSL香港以「开放、安全、持牌」为核心原则，持续推动亚洲合规数字资产生态发展，并以合规为先拓展业务版图，进军日本、澳洲、欧洲等市场，为全球客户提供安全、定制化的服务。` },
+    TC: { dis1: `本內容由 OSL數字證券有限公司（“OSLDS”） 提供，僅供參考之用，不構成亦不應被視爲購買、出售或認購任何證券、金融工具、產品或服務的要約、邀請或推薦。本內容不構成法律、稅務、會計或財務建議，收件人應在做出任何決定或採取任何行動前，尋求獨立的專業意見。OSLDS 對本內容的準確性、完整性或可靠性不作任何明示或暗示的陳述或保證，並對因使用本內容而產生的任何損失或損害不承擔任何責任。若引用第三方數據或信息，OSLDS 對該等數據的準確性、完整性或可靠性不作任何陳述或認可。本免責聲明所載的所有觀點、估算及信息均截至本聲明日期，並可能隨時變更，恕不另行通知。`, dis2: `<為避免產生歧義，本公告僅面向專業投資者（定義見《證券及期貨條例》（第 571 章）及其附屬法例），並不擬向任何在其所屬司法轄區內分發或使用本公告即構成違反適用法律或法規的個人或實體提供。任何查閱本公告的人士，均有責任遵守其所在司法轄區的所有適用法律及法規。>數字資產涉及重大風險，請在參與任何交易活動前充分了解相關風險。OSLDS 對因使用或依賴本公告而產生的任何損失概不承擔責任。`, about: `OSL數字證券爲OSL集團（863.HK）旗下的子公司，是香港首家獲證監會發牌且受保的數字資產交易平臺，自2018年起，平臺專注爲企業客戶、金融機構、專業及個人投資者提供機構級金融解決方案。OSL香港提供五大核心服務：經紀業務、綜合賬戶方案、資產託管、財富管理及交易所服務。其中經紀業務提供24小時高流動性加密貨幣交易及法幣出入金服務；託管方案採用客戶資產隔離的獨立錢包管理，並提供10億美元保險保障；財富管理包含代幣化國債等創新投資產品；同時專業及零售投資者亦可透過交易所安全合規買賣加密貨幣。作爲連接傳統金融與數字資產經濟的先驅，OSL香港以「開放、安全、持牌」爲核心原則，持續推動亞洲合規數字資產生態發展，並以合規爲先拓展業務版圖，進軍日本、澳洲、歐洲等市場，爲全球客戶提供安全、定製化的服務。` },
+  },
+  Global: {
+    EN: { dis1: `This announcement is for informational purposes only and does not constitute financial, investment, or trading advice, nor an offer or solicitation to trade. OSL does not guarantee the accuracy or completeness of this information and shall not be held liable for its use. Digital assets are highly speculative, volatile, and may become illiquid; investors risk losing their entire investment. Information herein may not be suitable for all persons or permitted in certain jurisdictions. You are responsible for conducting your own research, evaluating your risk appetite, and ensuring compliance with local laws before trading. OSL Bermuda Limited is licensed to conduct digital asset business by the Bermuda Monetary Authority.`, dis2: '', about: '' },
+    SC: { dis1: `本公告仅供参考，不构成财务，投资或交易建议，亦不构成任何交易要约，推荐或招揽。OSL 不保证此处信息的准确性或完整性，且不对因使用此类信息而产生的任何后果承担责任。数字资产具有高度投机性和波动性，且可能在任何时间失去流动性；投资者需承担损失全部投资本金的风险。本公告所含信息可能并不适用于所有人，或在某些司法管辖区不受法律允许。在进行交易前，您有责任自行研究、评估自身的风险承受能力，并确保遵守当地法律法规。OSL Bermuda Limited获百慕达金融管理局授权经营数字资产业务。`, dis2: '', about: '' },
+    TC: { dis1: `本公告僅供參考，不構成財務，投資或交易建議，亦不構成任何交易要約，推薦或招攬。OSL 不保證此處信息的準確性或完整性，且不對因使用此類信息而產生的任何後果承擔責任。數字資產具有高度投機性和波動性，且可能在任何時間失去流動性；投資者需承擔損失全部投資本金的風險。本公告所含信息可能並不適用於所有人，或在某些司法管轄區不受法律允許。在進行交易前，您有責任自行研究，評估自身的風險承受能力，並確保遵守當地法律法規。OSL Bermuda Limited獲百慕達金融管理局授權經營數字資產業務。`, dis2: '', about: '' },
+  },
+  updatedAt: null,
+};
+// 运行时缓存：公告组件是临时打开的，直接读这个对象，App 启动时会用云端版本覆盖
+let ANN_TPL = JSON.parse(JSON.stringify(ANN_TPL_DEFAULT));
+function annTpl(siteGroup, lang, field) {
+  const g = (ANN_TPL && ANN_TPL[siteGroup]) || {};
+  const l = g[lang] || {};
+  return l[field] || ((ANN_TPL_DEFAULT[siteGroup] || {})[lang] || {})[field] || '';
+}
+function saveAnnTplLocal(v) { try { localStorage.setItem(ANN_TPL_LOCAL_KEY, JSON.stringify(v)); } catch (e) {} }
+function loadAnnTplLocal() { try { return JSON.parse(localStorage.getItem(ANN_TPL_LOCAL_KEY) || 'null'); } catch (e) { return null; } }
+async function loadAnnTemplates() {
+  try {
+    const { data, error } = await db.from('ann_templates').select('data').eq('id','main').maybeSingle();
+    if (error) { console.warn('公告模板表还没建，先用内置文案:', error.message); return null; }
+    return data ? data.data : null;
+  } catch (e) { console.warn('公告模板读取失败，先用内置文案', e); return null; }
+}
+async function syncAnnTemplates(v) {
+  saveAnnTplLocal(v);
+  try {
+    const { error } = await db.from('ann_templates').upsert({ id:'main', data: v, updated_at: new Date().toISOString() });
+    if (error) console.error('公告模板保存失败:', error.message);
+    return !error;
+  } catch (e) { console.error('公告模板保存异常', e); return false; }
+}
+
 // ─── Checklist builder ───────────────────────────────────────────────────────
-function buildChecklist(site, product, tokenType, opts={}) {
+// ⚠️ 冻结版：迁移老记录用的旧清单（勾选原本按序号存）。等所有记录都带 stepKeysV2 后可删。
+function buildChecklistV1(site, product, tokenType, opts={}) {
   const nc = tokenType === 'newchain';
   const stableHub  = !!opts.stableHub;
   const launchpool = !!opts.launchpool;
@@ -418,6 +461,334 @@ function buildChecklist(site, product, tokenType, opts={}) {
   return s;
 }
 
+function buildChecklist(site, product, tokenType, opts={}) {
+  const nc = tokenType === 'newchain';
+  const stableHub  = !!opts.stableHub;
+  const launchpool = !!opts.launchpool;
+  const s = [];
+  // id 是步骤的稳定身份：勾选状态按 id 存，不按序号存，这样往中间插步骤不会让老记录错位
+  const add = (id, phase, tag, task, owner, contact, time, note='', critical=false, inputType=null, inputKey=null, inputOptions=null) =>
+    s.push({ id, phase, tag, task, owner, contact, time, note, critical, inputType, inputKey, inputOptions });
+
+  // PRE-CONDITIONS
+  if (site==='ID') add('pre-01','前置确认','pre','确认项目已在印尼政府 CFX 白名单','Listing Ops','Aisha Mi','提前确认','印尼站不需要VAAP，但币种必须在CFX白名单内才能上线',true);
+  if (nc) {
+    add('pre-02','前置确认','pre','确认 Fireblocks 支持该链','钱包','Huaxi Li','提前确认','HK站必须Fireblocks支持（AML冻结/解冻功能）',true);
+    add('pre-03','前置确认','pre','确认 KYT 工具支持该链','钱包/合规',site==='HK'?'Huaxi Li（Chainalysis）':site==='Global'?'Betty Nie（ScoreChain/Elliptic）':'SumSub','提前确认','查阅《KYT支持表》确认链是否在支持列表内，不支持则不能上该链',true);
+  }
+  if (site==='HK' || site==='Global')
+    add('pre-04','前置确认','pre','确认 Chainalysis 是否支持该币种','合规/钱包',site==='HK'?'Huaxi Li / Betty Nie':'Betty Nie','提前确认','在 Chainalysis 后台确认该币种已被支持并可正常 KYT 监控。不支持则需评估替代方案，不可直接上线',true);
+  if (product==='Orderbook'||product==='RFQ')
+    add('pre-05','前置确认','pre','确认 LP / MM 流动性支持','流动性',site==='HK'?'George Qiao / Andre Ki':site==='Global'?'Leo Cheng / Josiah Choong':'Aisha Mi / George Qiao','提前确认','确认做市商能否支持该币对。如不可支持，必须@Freya Yu说明卡点',true);
+
+  // 《SOP》上币&币对流程（Global + 印尼站）— 前置
+  if (site==='Global' || site==='ID')
+    add('pre-sop01','前置确认','pre','每周五上币交流会（与钱包团队对下周排期）','Listing Ops / 钱包','Huaxi Li','每周五','已部署完成、能够上线的币在交流会上提出，会上对齐下周上币安排');
+
+  // BD (skip for Maintenance — no commercial evaluation needed)
+  if (product!=='Maintenance') {
+    add('bd-01','业务评估','bd','商业评估（内部评审会）','BD / 研究院','Shirley Kwok / Scarlett Zhang','3–5天','按资产筛选评估框架评分，通过Listing内部评审会 + Lark上币评估流程决定');
+    add('bd-02','业务评估','bd','签署 NDA','BD','Shirley Kwok','1天','必须在讨论任何实质性商业细节前完成。禁止项目方提前对外披露任何信息',true);
+    add('bd-03','业务评估','bd','商务谈判：确定费用/MM/活动，签署 Listing Agreement','BD / 活动','Shirley Kwok / Freya Yu','按需','非标准合同条款必须法务专项审核。活动形式需提前获得合规确认');
+  }
+
+  // COMPLIANCE (skip for Maintenance)
+  if (site!=='ID' && product!=='Maintenance') {
+    add('compliance-01','合规/VAAP','compliance','完成合规尽调报告（VAAP尽调）','合规','Scarlett Zhang（备份：Eddie Xin）',site==='HK'?'≤2周':'约1周','政策依据：Virtual Asset Admission Policy - Jan 2026\n模板：[HK][Template] VAAP New Admission',true);
+    add('compliance-02','合规/VAAP','compliance','获取法律意见书（Legal Opinion）','法务','Ella Bai','HK约2周，Global约1周','每个上线站点需要独立一份。可与尽调并行推进');
+    add('compliance-03','合规/VAAP','compliance','获取风险评估报告 + 平台参数','风控','Yaoxi Zhong / Tesla Ma','半天-1天','从风控获取：平台充提参数、交易参数上下限。后续配置时需要用到');
+    add('compliance-04','合规/VAAP','compliance','VAAP会议：提交材料 → 投票 → 存档','Listing Ops','Freya Yu','按VAAP排期','通过VAAP上会申请系统提交。会议中需做冲突声明。会后整理会议纪要+投票记录存档。\n内容清晰即可推进下一步，无需等全部审批通过',true);
+    if (site==='HK') {
+      add('compliance-05','合规/VAAP','compliance','（HK专属）SFC 上报通知','合规','Henry Tsang / Sophie Ma','上线前完成','必须在上线前发送，向Sophie Ma确认已经发送',true);
+      add('compliance-06','合规/VAAP','compliance','（HK专属）准备产品披露内容，测试前由 Scarlett Zhang 发布','合规','Scarlett Zhang','VAAP期间准备，测试前发布','过VAAP时内容已准备好，Scarlett Zhang 在测试开始前确认发布即可。\n⚠ 测试前必须先发布，不能等到正式上线后才提。\n发布页面：https://trade-hk.osl.com/pages/productDisclosure\n（页面技术更新：Rebeca Zhang 给 Jim Ball 提 K-02 单）',true);
+      add('compliance-07','合规/VAAP','compliance','（HK零售专属）Indices 合资格指数核查','研究院','Scarlett Zhang','月度维护','HK零售资产需确认被至少2家独立指数提供商收录，其中1家需有传统证券市场指数发布经验');
+
+      // ── 合规审批闸门（5人并行会签，每人主动签字）──
+      const ap = CHANGE_APPROVALS.hk_listing;
+      add('compliance-08','合规/VAAP','compliance','🔒 合规审批闸门（'+ap.approvers.length+'人并行会签）','合规审批组',ap.approvers.join(' / '),'各审批人主动签字',
+        '⚠️ 合规要求：本次上币变动需以下 '+ap.approvers.length+' 人并行会签，每人各自主动签字：\n'+ap.approvers.map(n=>'• '+n).join('\n')+'\n\n规则：并行（同时收到，不排队）+ 全签（每人都要点"签字"）。\n五人全部签字后本闸门才算通过，方可进入执行配置。\n\n（此为通用「香港站变动审批」框架的上币分支，后续可扩展参数调整、下币等变动类型）',
+        true, 'approval', 'hk_change_approval', ap.approvers);
+    }
+  }
+
+  // EXECUTION — HK Orderbook
+  if (product==='Orderbook' && site==='HK') {
+    add('exec-01','执行配置','exec','提前通知 TechOps 上币币种及时间','Listing Ops','Freya Yu → Jim Ball','提前1周以上','提前通知@Jim Ball确认排期。这是HK Orderbook最主要的耗时来源（2-3周），越早越好',true);
+    add('exec-02','执行配置','exec','做市商沟通 + 流动性确认','流动性','George Qiao','上线前≥2周','确认做市商、锁定币对/时间/深度要求。首次接入新MM需先onboarding（约1周）');
+    add('exec-03','执行配置','exec','填写币对参数，与风控核对','Listing Ops','Jian Pan / Leo Cheng / Anduin Lothar','上线前 2-3 天','参考竞品，与风控沟通确定基础参数，填写HK spot trading pairs parameters表格并在群里通知');
+    add('exec-04','执行配置','exec','提交 K-01 审批','Listing Ops','Rebeca Zhang','半天','审批人：Ryan Ren / George Qiao / Eugene Cheung / Jason Liu / Jim Ball\n提出后内容清晰即可推进，不必等全部人通过',true);
+    add('exec-05','执行配置','exec','TechOps 后台 MG 配置（分两阶段发布）','TechOps','Jim Ball','2–3周（主要瓶颈）','阶段①：先开放给MM+内部测试\n阶段②：再开放给公众\n包含E2E测试、流量测试',true);
+    add('exec-06','执行配置','exec','准备 Token 图标 icon','R&D','Ning Lao（App端：Darcy Zhu）','≥3天（icon到位后）','App端需手动通知@Darcy Zhu更新。请尽早提供SVG+PNG格式');
+    add('exec-07','执行配置','exec','上币参数配置（Coinhub / 币种信息表）','Listing Ops','Rebeca Zhang','半天','ERC-20：在Coinhub填写（需VAAP批准+风险参数+财务Netsuite账号）\n其他链：发信息表给@Huaxi Li\n风险参数：@Tom Ma / @Prakash\n财务账号：@Ringo Lo');
+    add('exec-08','执行配置','exec','钱包配置','钱包','Huaxi Li','约2天','提交任务后管理产研配置，含线下部署');
+    add('exec-09','执行配置','exec','Apollo 前端配置（新增表+移动端）','现货技术','Lucas Mak','2小时（审批后）','提交生成新表申请单，创建币对数据库表\napollo socket-service kline.support.symbols添加新币种\napollo user-service trade_pairs添加币对\n⚠ Apollo数据必须与MG后台配置完全一致');
+    add('exec-10','执行配置','exec','（HK专属）Prakash Konagi 后台配置','TechOps','Jim Ball / Prakash Konagi','视排期','Prakash Konagi 负责后台 set-up 配置。配置完成后进入白名单 + Puhui 做市商测试阶段',true);
+    add('exec-11','执行配置','exec','（HK专属）白名单配置 + 与 Puhui MM 联调测试','TechOps / Listing Ops','Prakash Konagi / Puhui MM','Prakash 完成配置后','Prakash 完成后台配置后：\n① 将 Puhui 做市商账号加入白名单\n② 配合 Puhui MM 进行联调测试，确认报价、成交、充提均正常\n③ 测试通过后才可进入正式上线流程',true);
+    add('exec-12','执行配置','exec','充提测试 + 验证','出入金','Philip Ho / Tolkki Xu','2天','KYT配置 → 充值测试 → 提现测试');
+    add('exec-13','执行配置','exec','更新网站交易对页面','Listing Ops','通知 Aaron Du','上线前1天','https://trade-hk.osl.com/pages/trading-pairs/professional-investors-and-corporates');
+    add('exec-14','执行配置','exec','通知 Omnibus','Listing Ops','Kevin Law','上线前','通知Omnibus负责人，让broker支持新币对。所有产品都需要这一步');
+    add('launch-01','正式上线','launch','开启充值 / 交易开关','Listing Ops','Rebeca Zhang（Coinhub操作）','上线当天','在Coinhub打开充值、交易开关',true);
+    add('launch-02','正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','提供 Token Launch Info Sheet。渠道：公告/社媒/EDM/App Push/Banner');
+  }
+
+  // EXECUTION — HK RFQ
+  if (product==='RFQ' && site==='HK') {
+    add('exec-15','执行配置','exec','发起 Lark 上币审批流','Listing Ops','Freya Yu / Rebeca Zhang','发起时','附上：资产名称、站点(HK)、产品(RFQ)、预期上线时间、预期币对。转发到上币核心排期群');
+    add('exec-16','执行配置','exec','在 INS 支持群发起 Requirement','Listing Ops','Rebeca Zhang / Freya Yu / Eyang','审批通过后尽早发','在【香港&SG站上币INS支持 / HK&SG Site Supports INS Listings】群里发起需求，@Jim Ball @Prakash Konagi，告知他们开始配置。\n\n话术参考：\nHi Jim & Prakash, we are launching [XXX/USD] RFQ on HK site. Could you please start the INS configuration? Expected launch date: [日期]. Thanks!',true);
+    add('exec-17','执行配置','exec','流动性审核（审批节点1）','HK Trader','Andre Ki','1天','评估LP支持、底仓是否可借。可支持→写出LP名称+额度；不可支持→写清楚卡点并@Freya Yu',true);
+    add('exec-18','执行配置','exec','钱包排期（审批节点2）','钱包','Huaxi Li','1天','确认钱包配置排期');
+    add('exec-19','执行配置','exec','交易对排期（审批节点3）','产品','Irene Li / Harry Tian / Ziyao Xu','1天','RFQ由Irene Li + Harry Tian + Ziyao Xu均Approve后完成');
+    add('exec-20','执行配置','exec','钱包配置 + 充提验证','钱包/出入金','Huaxi Li / Philip Ho','2天','完成后Approve');
+    add('exec-21','执行配置','exec','底仓配资（RFQ专属）','Trade Ops','Chris Cheng / Hetty Li','1天','根据风险信用额度对HK/Global两个站点RFQ系统账号分别进行底仓配资\n前置：trading资金需提前到位（@Henry Tam确认）');
+    add('exec-22','执行配置','exec','（HK专属）Jim Ball 后台配置 + 测试/生产环境验证','TechOps','Jim Ball','视排期','Jim Ball 负责系统后台配置，完成测试环境验证后再推送至生产环境确认。\n⚠ 测试环境与生产环境须分别确认，不可跳过测试环境直接上生产',true);
+    add('exec-23','执行配置','exec','RFQ 交易对配置 + 测试','产品','Irene Li','1天','验证完成后确保交易对状态为"closed"，不对用户展示，等正式上线再开关');
+    add('exec-24','执行配置','exec','（HK专属）交易对页面配置','产品','Irene Li','半天','提交 [HK] Trading Pair Page Update - PI 需求');
+    add('exec-25','执行配置','exec','通知 Omnibus','Listing Ops','Kevin Law','上线前','通知Omnibus负责人，让broker支持新币对');
+    add('launch-03','正式上线','launch','开启充提全量开关 + RFQ 开关','Listing Ops / 产品','Rebeca Zhang（充提） / Irene Li（RFQ手动打开）','上线当天','两个开关都要打开才算完成',true);
+    add('launch-04','正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','提供 Token Launch Info Sheet');
+  }
+
+  // EXECUTION — HK OTC
+  if (product==='OTC' && site==='HK') {
+    add('exec-26','执行配置','exec','发起 Lark 上币审批流','Listing Ops','Freya Yu / Rebeca Zhang','发起时','附上：资产名称、站点(HK)、产品(OTC)、预期上线时间、预期币对');
+    add('exec-27','执行配置','exec','流动性审核（审批节点1）','HK Trader','Andre Ki','1天','OTC流动性评估（OTC无需Trade Ops底仓配资）');
+    add('exec-28','执行配置','exec','钱包排期（审批节点2）','钱包','Huaxi Li','1天','确认钱包配置排期。注：OTC需同步配置SG站');
+    add('exec-29','执行配置','exec','交易对排期（审批节点3）','产品','Irene Li','1天','OTC由Irene Li排期并Approve');
+    add('exec-30','执行配置','exec','钱包配置 + 充提验证','钱包/出入金','Huaxi Li / Philip Ho','2天','完成后Approve');
+    add('exec-31','执行配置','exec','（HK专属）Jim Ball 后台配置 + 测试/生产环境验证','TechOps','Jim Ball','视排期','Jim Ball 负责系统后台配置，完成测试环境验证后再推送至生产环境确认。\n⚠ 测试环境与生产环境须分别确认，不可跳过测试环境直接上生产',true);
+    add('exec-32','执行配置','exec','OTC 交易对配置 + 测试','产品','Irene Li','1天','配置完成后验证');
+    add('exec-33','执行配置','exec','通知 Omnibus','Listing Ops','Kevin Law','上线前','通知Omnibus负责人，让broker支持新币对');
+    add('launch-05','正式上线','launch','【宣发前必须完成】Spirit 移除白名单 + 开启充提','Listing Ops / TechOps','Spirit（移除白名单）→ Yiyang Lu / Teddy（后台开启充提）','宣发前','⚠️ 此步骤是宣发的前置条件，未完成不得进行宣发。\n① Spirit 负责在系统后台将白名单限制移除\n② Yiyang Lu 或 Teddy 在后台将充提开关打开\n两步都完成后才可通知宣发',true);
+    add('launch-06','正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','开充提后立即进行','提供 Token Launch Info Sheet。⚠ 确认充提已开启、白名单已移除后才可宣发');
+  }
+
+  // EXECUTION — Global RFQ/OTC
+  if (site==='Global' && (product==='RFQ'||product==='OTC')) {
+    add('exec-34','执行配置','exec','发起 Lark 上币审批流 + 提供配置表','Listing Ops','Freya Yu / Rebeca Zhang','发起时','附上 Global站上币上链配置表。同步转发到上币核心排期群');
+    add('exec-35','执行配置','exec','准备上币参数（填写配置表）','Listing Ops','Rebeca Zhang','半天','填写 Global站上币上链配置表（币种参数共享文档）');
+    add('exec-36','执行配置','exec','币种信息参数配置（国际站财务后台）','Listing Ops','Rebeca Zhang','半天','URL: https://web-admin-finance-prod.glb.osl-nucleus.com/\n包含：KYT配置（Betty Nie）+ 风控配置（Michael Xu）');
+    add('exec-37','执行配置','exec','钱包 + 安全配置','钱包/安全','Huaxi Li / Richard Yang','1–2天','Fireblocks安全权限配置：@Richard Yang');
+    add('exec-38','执行配置','exec','币种启用（灰度状态）','Listing Ops','Rebeca Zhang','半天','钱包完成后，在币种配置中"启用"币种，发布apollo。默认灰度状态，仅白名单可见');
+    add('exec-39','执行配置','exec','配置灰度白名单','Listing Ops','Rebeca Zhang / Freya Yu','半天','在灰度中添加：钱包验证组 + 交易验证组的白名单');
+    if (product==='RFQ') {
+      add('exec-40','执行配置','exec','提交 Lark 执行审批：RFQ/OTC上币执行审批','Listing Ops','Eyang / Freya Yu / Yaode Zhang','配置前','在 Lark 发起【RFQ/OTC上币执行审批】审批流，审批通过后方可进行后续配置步骤。\n① 进入 Lark 审批中心，选择「RFQ/OTC上币执行审批」\n② 填写币种、交易对、预期上线时间等信息\n③ 提交后等待审批通过\n④ 截图留存后推进下一步',true);
+      add('exec-41','执行配置','exec','Ziyao Xu 配置流动性','Global Trader / 流动性','Ziyao Xu','1天','由 Ziyao Xu 负责配置 RFQ 流动性参数。配置完成后通知 Listing Ops 确认',true);
+      add('exec-42','执行配置','exec','Yi Wei Cheong 确认资金 + Hetty Li 配置底仓','Trade Ops','Yi Wei Cheong → Hetty Li','1天','① Yi Wei Cheong 确认有足够资金可用于底仓配置\n② 确认到位后，通知 Hetty Li 进行底仓账户配置\n③ Hetty Li 完成配置后截图留存',true);
+      add('exec-43','执行配置','exec','后台配置交易对','Listing Ops','Eyang / Yaode Zhang / Freya Yu','配置当天','由 Eyang、Yaode Zhang 或 Freya Yu 在后台完成 RFQ 交易对配置。\n① 登录 Global 后台\n② 配置交易对参数\n③ 验证配置正确后确保交易对为"closed"状态（等正式上线再开启）',true);
+    }
+    if (product==='OTC')
+      add('exec-44','执行配置','exec','交易对排期（产品Approve）','产品','Irene Li','1天','OTC由Irene Li排期并Approve');
+    if (product==='RFQ' && stableHub) {
+      add('exec-45','执行配置','exec','【StableHub】确认币种参数','Listing Ops / 产品','Henry Wong','配置前确认','向 @Henry Wong 确认币种参数（Token-level parameters），包括币种基础信息、精度等配置',true);
+      add('exec-46','执行配置','exec','【StableHub】确认币对参数','Listing Ops / 产品','Anduin Lothar / Jian Pan','配置前确认','向 @Anduin Lothar 或 @Jian Pan 确认币对参数（Pair-level parameters），包括限额规则、精度、交易对配置等',true);
+      add('exec-47','执行配置','exec','【StableHub】确认币对限额规则','Listing Ops / 产品','Eyang / Irene Li','配置前确认','确认每个交易对的 1:1 兑换额度上限（例：每位用户每日 $50K）及超限处理方式（按市价成交 or 无法交易）。\n示例：USD/USDC 每人每日 50K 1:1；USDT 交易对每人每月 20K 1:1；超出限额无法交易',true);
+      add('exec-48','执行配置','exec','【StableHub】底仓资金入账','Listing Ops / Trade Ops','Eyang（申请）→ Harry Tian（转账）','配置前完成','Eyang 申请底仓资金金额及目标地址，Harry Tian 将资金转入 StableHub 对应账户。入账后截图存档',true);
+      add('exec-49','执行配置','exec','【StableHub】通知产研上线','Listing Ops','Eyang → 【Stablehub/RFQ 相关问题沟通】群','上线当天','在【Stablehub/RFQ 相关问题沟通】微信群中通知产研。\n\n话术参考：\nhi StableHub 本周新增上线 XXX 交易对：XXX/USD，XXX/USDC，XXX/USDT。已经确认无市价，USD 和 USDC 交易对初步设置每人每日 50k 1:1 限额，USDT 交易对设置每人每月 20k 1:1 限额；超出限额无法交易。底仓已经转入了，打了 50k。后续根据限额规则产品的更新再统一调整限额。',true);
+      add('exec-50','执行配置','exec','【StableHub】确认奖金打入发奖账户','Listing Ops','Tolkki Xu','上线前确认','确认奖励资金已转入发奖账户，由 Tolkki Xu 核实',true);
+    }
+    add('exec-51','执行配置','exec','充提验证 + RFQ/OTC配置测试','Listing Ops监督 / 产品','Huaxi Li / Irene Li','1天','充值验证→底仓充值→配置&验证。RFQ验证完确保交易对为"closed"状态');
+    add('exec-52','执行配置','exec','行情页 / 币种资料配置（如适用）','产品','Irene Li','半天','RFQ行情页：https://www.osl.com/en/markets');
+    add('exec-53','执行配置','exec','确定上线时间，通知相关人员','Listing Ops','Freya Yu → Aaron Du / Irene Li','上线前1天','');
+    add('launch-07','正式上线','launch','充提全量开关 + RFQ/OTC开关','Listing Ops / 产品','Rebeca Zhang（充提） / Irene Li（RFQ/OTC手动打开）','上线当天','',true);
+    add('launch-08','正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','提供 Token Launch Info Sheet');
+  }
+
+  // EXECUTION — Global Orderbook
+  if (site==='Global' && product==='Orderbook') {
+    add('exec-54','执行配置','exec','前置确认 LP / MM 支持','流动性/产品','Leo Cheng / Irene Li','提前确认','确认MM/LP支持及可支持的交易额度');
+    add('exec-55','执行配置','exec','填写交易对参数，与风控核对','Listing Ops','Rebeca Zhang ↔ Work Wang','1天','填写 Global现货上线币对及基础参数 表格');
+    add('exec-56','执行配置','exec','通知 MM 准备','流动性','Freya Yu → Leo Cheng','上线前≥1周','');
+    add('exec-57','执行配置','exec','币种信息配置 + 钱包配置','Listing Ops / 钱包','Rebeca Zhang / Huaxi Li','1–2天','参照Global RFQ/OTC的参数配置流程');
+    add('exec-58','执行配置','exec','Spot 交易对准备（Apollo配置）','产品/研发','Aaron Du → Max Liu / Yellow Jiang','按排期','通知@Aaron Du，他同步到研发进行Apollo配置');
+    add('exec-59','执行配置','exec','充提验证','Listing Ops','Huaxi Li','1天','');
+    add('launch-09','正式上线','launch','充提全量开关打开 + 宣发','Listing Ops / Marketing','Rebeca Zhang / Freya Yu','上线当天','',true);
+  }
+
+  // EXECUTION — Global Perp
+  if (site==='Global' && product==='Perp') {
+    add('exec-60','执行配置','exec','VAAP确认：指数价格可取 + 杠杆倍数','合规/风控','Scarlett Zhang / Tesla Ma','过VAAP时确认','合约特有：在VAAP阶段需同时确认指数价格可取，并确认币对杠杆倍数',true);
+    add('exec-61','执行配置','exec','最大下单量 + 风险限额确认','风控','Tesla Ma / Work Wang','1天','确认最大下单量和下单金额。每个币对对应一个独立的风险限额表');
+    add('exec-62','执行配置','exec','合约后台配置（币对）','Listing Ops','Freya Yu / Rebeca Zhang','1天','在合约后台配置币对');
+    add('exec-63','执行配置','exec','价格限制配置','Listing Ops','Freya Yu / Rebeca Zhang','半天','配置合约价格上下限，限制用户下单价格范围和撮合成交范围');
+    add('exec-64','执行配置','exec','指数配置 + 资金费率','Listing Ops','Freya Yu / Rebeca Zhang','半天','每个币对增加交易所指数配置，并配置资金费率');
+    add('exec-65','执行配置','exec','特殊费率配置（如需）','Listing Ops / 流动性','Freya Yu / Leo Cheng → Eric Zhang','按需','按流动性团队通知需求配置做市商特殊费率，研发检查做市商账号与费率');
+    add('exec-66','执行配置','exec','币对发布（隐藏）+ 做市商接入验证','流动性','Leo Cheng','约2小时验证','后台发布但不展示，MM可通过API摆单并验证\n注：Puhui新币对需专项资金申请，约2天');
+    add('launch-10','正式上线','launch','正式上线 + 开放展示 + 风控监控配置','Listing Ops / 风控','Freya Yu / Rebeca Zhang / Work Wang','上线当天','通知风控@Work Wang配置监控',true);
+    add('launch-11','正式上线','launch','Marketing 宣发','Marketing','Freya Yu 协调','上线同步','');
+  }
+
+  // EXECUTION — ID
+  if (site==='ID') {
+    add('exec-67','执行配置','exec','准备上币参数 + 通知钱包 + 通知流动性','Listing Ops','Rebeca Zhang → Huaxi Li / George Qiao','半天','填写上币配置表（参考：上币字段说明）。同步通知钱包和流动性团队');
+    add('exec-68','执行配置','exec','后台币种信息参数配置（印尼站财务后台）','Listing Ops','Rebeca Zhang','半天','URL: https://upex-base-rest-finance.id.sre-public.com/');
+    add('exec-69','执行配置','exec','钱包币种/链参数配置','钱包','Huaxi Li','1–2天','完成所有链和币种配置');
+    add('exec-70','执行配置','exec','研发 Apollo 配置','研发','Aaron Du → Max Liu / Yellow Jiang','1天','通知@Aaron Du，他同步币对参数给研发进行Apollo配置');
+    add('exec-71','执行配置','exec','运营后台币对参数配置','Listing Ops','Aaron Du / Aisha Mi','半天','URL: https://upex-base-rest.id.sre-public.com/zh_CN/configSystem/tradeConfig');
+    add('exec-72','执行配置','exec','配置 MM 账户（灰度状态）','Listing Ops','Freya Yu / Aaron Du','半天','选择"是"灰度→搜索币对→"转线上"→"同步Apollo"→填入做市账户和对敲账户\n如报错联系：产品@Aaron Du + 研发@Max Liu');
+    add('launch-12','正式上线','launch','开盘（点击开盘按钮）','Listing Ops','Freya Yu','上线当天','⚠ 开盘前先在用户侧界面检查：币对展示和排序是否符合预期',true);
+    add('launch-13','正式上线','launch','Marketing 宣发','Marketing','Aisha Mi 协调','上线同步','印尼站内容需遵守OJK法规，不得有收益保证或误导性声明');
+    // 《SOP》ksy 币种配置与地址加白（印尼站，Orderbook / RFQ）
+    if (product==='Orderbook' || product==='RFQ') {
+      add('exec-sop05','执行配置','exec','配置币对并勾选「隐藏币对」','Listing Ops','Aaron Du / Aisha Mi','开盘前','先把币对配出来并勾隐藏，后面的上架、指数、加白都在隐藏状态下做，前端看不到',true);
+      add('exec-sop06','执行配置','exec','点击上架（上架后才能配置指数）','Listing Ops','Aaron Du / Aisha Mi','配好币对后','顺序不能反：不点上架就配不了指数');
+      add('exec-sop07','执行配置','exec','同步阿波罗，同步时把地址加进去','Listing Ops','Aaron Du','上架后','同步阿波罗这一步要顺手把地址加上');
+      add('exec-sop08','执行配置','exec','三个白名单加白（税费 / 上报数据 / 特殊手续费）','Listing Ops','按 oxl 上币通知群的通知','同步阿波罗后','⚠ 税费和上报数据白名单只配子账号地址，加之前先查一下是否已添加；特殊手续费要母账号和子账号都配（没发母账号的找同事要），且和币对关联——把所有 UID 放在同一个币对下，taker/maker 全部配 0，也就是 1001 档',true);
+      add('exec-sop09','执行配置','exec','指数配置（至少三个交易所）','Listing Ops','Aaron Du','加白后','⚠ 选至少三个交易所的价格，注意权重加和必须等于 1：三个交易所系统默认是 0.33/0.33/0.33，加起来不等于 1，要把其中一个改成 0.34。可以直接启用，因为币对是隐藏的，前端看不到',true);
+      add('exec-sop10','执行配置','exec','在 oxl 群通知 MM 挂单验证（不要成交）','Listing Ops','做市商','指数配置完','让 MM 挂单验证，但明确不要成交');
+      add('launch-sop01','正式上线','launch','开盘：在币对配置「操作」点「显示」打开币对','Listing Ops','Aisha Mi','开盘时间到','前面所有配置都在隐藏状态下完成，点「显示」才是真正对用户开放',true);
+    }
+    if (launchpool) {
+      add('exec-73','执行配置','exec','【Launchpool】Gas Fee 补充到链上','Listing Ops','Aisha Mi','配置前（新链必做）', nc?'新链上线必须提前将 Gas Fee 充值到链上地址，确保合约交互正常。请确认链地址和金额后操作':'非新链可忽略此步骤，如涉及合约交互请确认 Gas Fee 余额充足', nc);
+      add('exec-74','执行配置','exec','【Launchpool】奖励转入发奖账户','Listing Ops','Aisha Mi','上线前完成','将 Launchpool 活动奖励资金转入印尼站发奖账户，Aisha Mi 确认到账后存档截图',true);
+      add('exec-75','执行配置','exec','【Launchpool】计算 APR','Listing Ops / 产品','Aisha Mi','上线前','根据奖励总量、活动周期、预计参与量计算年化收益率（APR），提供给公告和产品配置使用',true);
+      add('exec-76','执行配置','exec','【Launchpool】撰写上线公告','Marketing / Listing Ops','Aisha Mi 协调','上线前','公告内容需包含：活动规则、奖励币种、APR、参与条件、时间段。须符合OJK法规，不得有收益保证',true);
+      add('exec-77','执行配置','exec','【Launchpool】后台参数配置','产品 / 技术','Aisha Mi → 技术团队','上线当天','在 Launchpool 后台配置活动参数：奖励币种、总量、APR、开始/结束时间、参与条件、上限等',true);
+    }
+  }
+
+  // EXECUTION — 仅上链（所有站点）
+  if (product==='ChainOnly') {
+    add('exec-78','执行配置','exec','提 Lark 审批：参数新增/调整审批','Listing Ops','Eyang','配置前','在 Lark 发起【参数新增/调整审批 Parameters Change Request】审批流，审批通过后方可进行后续钱包参数配置。\n① 进入 Lark 审批中心，选择「参数新增/调整审批 Parameters Change Request」\n② 填写币种、链、参数变更内容等信息\n③ 提交后等待审批通过\n④ 审批通过截图留存，再推进下一步\n⚠️ 新链一定要把新加坡站（SG）也勾进审批范围——SG 站要准备底仓，审批漏了 SG，后面底仓这条线走不通。',true);
+    // 新链底仓（SG 站）：OTC 发起申请 → 资金打到 SG 底仓账户 → 开新链充提 → 跨链提币链路
+    if (nc && site!=='ID') {
+      add('exec-sop20','执行配置','exec','发起底仓申请（SG 站）','OTC / Trade Ops','Josiah Choong','钱包配置阶段，开充提之前','由 OTC 同事发起底仓申请，Josiah 这边起头，金额跟他们商量——小链通常 5 万就够了。底仓是放在新加坡站（SG）的，所以前面的 Lark 审批流里必须已经包含 SG 站',true,'text','底仓金额');
+      add('exec-sop21','执行配置','exec','资金打入 SG 站底仓账户','OTC','Josiah Choong','底仓申请通过后','Josiah 走流程把对应资金打到 SG 站的底仓账户。资金没到账就不要开新链充提，否则用户提币时跨链那一步没有底仓可用',true);
+      add('exec-sop22','执行配置','exec','后台开启新链充提','Listing Ops','Yiyang Lu','确认 SG 底仓已到账后','底仓到位后，Listing 运营在后台把该新链的充提打开。顺序不能反：先底仓到账，再开充提',true);
+      add('launch-sop10','正式上线','launch','跑通一次跨链提币链路','SG 站 / Trade Ops','Josiah Choong → TradeOps','开充提后首次提币','提币链路：香港站用户发起提币（例如 USDC 从 Morph 提出）→ SG 站协助跨链，把对应资产打到目标链上 → SG 站完成跨链转账后，TradeOps 再走已有的那套提币流程。上线后先跑通一次，确认整条链路没问题',true);
+    }
+
+    if (site==='HK' || site==='SG') {
+      // ── HK / SG 新链上币详细流程（按 sprint 49 USDGO/Morph 这版更新）──
+      // 站点范围：香港站 + SG 站一起支持充提。节点之间是硬依赖，不能跳。
+      add('exec-79','执行配置','exec','【节点1·需求启动】Listing Ops 提供上币参数','Listing Ops','Yiyang Lu / Freya Yu','需求启动当天','在《[Confidential] HK/SG 站上币上链参数配置表》里填齐参数，供研发准备提单：\n• 币种名称、Symbol、CoinGecko 链接\n• 每条链的代币合约地址（同一个币在不同链上要分别填，例如 USDGO 在 ETH 链和 Morph 链各一个）\n• 链上精度 Decimals\n• 站点范围（香港 + SG）\n填完把表格链接存在下面的字段里，后面几个团队都要照这张表做',true,'text','上币参数配置表链接');
+      add('exec-80','执行配置','exec','【节点1·需求启动】研发提单准备 — 钱包侧','钱包研发','Pine Sun','需求启动后','钱包侧完成提单准备：新链/币种接入所需的钱包配置，准备好后等待审核',true);
+      add('exec-81','执行配置','exec','【节点1·需求启动】研发提单准备 — 平台侧','平台研发','Haibo Liu','需求启动后','平台侧完成提单准备',true);
+      add('exec-sop30','执行配置','exec','【节点1·需求启动】Setting limit 管理后台配置准备 — 平台侧','平台研发','Spirit Zhang / Haibo Liu','需求启动后','在管理后台把 Setting limit 的配置位准备出来，等交易运营和钱包运营把参数表交过来后填入',true);
+      add('exec-sop31','执行配置','exec','【前置交付】交易运营提供 Tier limit 表格 + 参数逻辑','Trade Ops','Hetty Li / Dicky Lam / Roxanne Mak → Haibo Liu','越早越好，卡 Setting limit','交易运营把 Tier limit 的表格和具体参数逻辑整理好给平台团队 Haibo Liu。这份不给，平台的 Setting limit 配不下去',true);
+      add('exec-sop32','执行配置','exec','【前置交付】钱包运营提供 wallet transfer Limit 表格 + 参数逻辑','Wallet Ops','Louis Chan / Ryan Chan / Bryan Yu → Haibo Liu','越早越好，卡 Setting limit','钱包运营把 Limit setting for wallet transfer（user specific）的表格和具体参数逻辑给平台团队 Haibo Liu。同样是 Setting limit 的前置',true);
+      add('exec-82','执行配置','exec','【节点1·需求启动】TradeOps + WalletOps 启动 Setting limit','Trade Ops / Wallet Ops','Hetty Li / Dicky Lam / Roxanne Mak（TradeOps）\nLouis Chan / Ryan Chan / Sophie Qin / Cyrus Leung / Bryan Yu / Sky Ng（WalletOps）','需求启动后','两个运营团队同步启动 Setting limit 相关工作，参数来源就是上面两份前置交付的表格');
+      add('exec-83','执行配置','exec','【节点2】研发提单审核 + 生产配置 — 钱包侧','钱包研发','Pine Sun','提单准备完成后','钱包侧完成提单审核，并在生产环境执行钱包配置',true);
+      add('exec-84','执行配置','exec','【节点2】研发提单审核 + 生产配置 — 平台侧','平台研发','Haibo Liu','提单准备完成后','平台侧完成提单审核，并在生产环境完成币种 / Setting limit 配置',true);
+      add('exec-85','执行配置','exec','【节点2】测试同步 Test Plan + 协调测试币','测试 / Listing Ops','Zhengfan Wang / Perry Zheng（测试计划）\nYiyang Lu（测试币，cc Yuki Z / Eddie Xin）','生产配置完成后','① 测试团队把 Test Plan 同步给交易运营和钱包运营团队\n② Listing 运营协调测试币资源，直接打到测试人员的对应钱包里——不是给个地址就算完，要确认钱包里收到了',true);
+      add('exec-86','执行配置','exec','【节点3】生产验证 + Limit setting 配置完成','测试 / Trade Ops / Wallet Ops','Zhengfan Wang / Perry Zheng（生产验证）\nHetty Li / Dicky Lam / Roxanne Mak / Louis Chan / Ryan Chan / Sophie Qin / Cyrus Leung / Bryan Yu / Sky Ng（Limit setting）','测试计划同步后','① 测试介入生产验证\n② 两个运营团队完成 limit setting 配置',true);
+      add('launch-14','正式上线','launch','【节点4】充提验证完成（划转 + 提现验证）','Trade Ops / Wallet Ops','Hetty Li / Dicky Lam / Roxanne Mak / Louis Chan / Ryan Chan / Sophie Qin / Cyrus Leung / Bryan Yu / Sky Ng','生产验证通过后','TradeOps 和 WalletOps 一起完成划转和提现验证，这一步过了才算充提真的通了',true);
+      add('launch-sop11','正式上线','launch','【节点5】流动性准备，面客 ready','Listing Ops / 交易','Yiyang Lu / Oscar Chan','充提验证完成后、对外之前','运营和交易团队同步完成流动性准备，确认可以面客。这是最后一道，前面都通了但流动性没准备好就不能对外',true);
+    } else {
+      // ── 其他站点（Global 等）通用流程 ──
+      add('exec-87','执行配置','exec','钱包币种/链参数配置','钱包','Huaxi Li','1–2天','配置该链/币种的钱包参数，完成后即可进入白名单测试阶段',true);
+
+      if (site==='Global' && nc) {
+        // ── Global 新链专属：TradeOps 底仓准备 ──
+        add('exec-88','执行配置','exec','TradeOps 准备链上底仓（新链专属）','Trade Ops','Oscar（主要负责）/ Roxanne Mak / Dicky Lam','与钱包配置同步进行','遇到新链上线，TradeOps 需提前准备该链的链上底仓（Gas Fee / 初始资金），确保后续充提测试及正式交易有底仓支持。\nGlobal 底仓主要由 Oscar 负责，Roxanne Mak / Dicky Lam 协同配合。',true);
+        add('exec-89','执行配置','exec','向财务申请底仓资金','Trade Ops / 财务','Oscar → 财务团队','底仓准备阶段，链上底仓配置前完成','Oscar 向财务提交底仓资金申请，资金到账后交由 TradeOps 完成底仓配置。\n⚠️ 涉及 SG（新加坡站）的财务事项联系 Yi Wei Cheong。注意跟上面的「发起底仓申请（SG 站）」区分：SG 站的新链底仓由 OTC 的 Josiah 发起并打款，这条是 Global 自己的底仓资金申请。',true);
+      }
+
+      add('exec-90','执行配置','exec','加白名单做充提测试','Listing Ops / 钱包','Eyang / Huaxi Li','钱包配置完成后','在系统后台将内部测试账号加入白名单，进行充值和提现功能验证。\n① 将测试账号加入充提白名单\n② 执行充值测试（小额到账确认）\n③ 执行提现测试（确认链上到账）\n④ 测试通过后再进入正式上线流程',true);
+    }
+
+    add('launch-15','正式上线','launch','去掉白名单（开充提前必做）','Listing Ops','Eyang / Rebeca Zhang','开充提前','⚠️ 开启充提全量开关前，必须先将白名单限制移除，否则普通用户无法正常充提。\n① 在系统后台移除充提白名单配置\n② 确认白名单已清空\n③ 完成后再执行下一步"开启充提全量开关"',true);
+    add('launch-16','正式上线','launch','开启充提全量开关','Listing Ops','Rebeca Zhang','移除白名单后','确认白名单已移除后，打开充提全量开关。充提开关打开后即完成，无需交易对配置',true);
+  }
+
+  // EXECUTION — 网络维护关充提
+  if (product==='Maintenance') {
+    add('exec-91','执行配置','exec','通知 SFC','合规','Scarlett Zhang','操作前','网络维护关充提前必须通知 SFC，由 Scarlett Zhang 负责发送通知',true);
+    add('exec-92','执行配置','exec','通知客户','Listing Ops / 客服','Kevin Law','操作前','通过官方渠道通知受影响客户，说明维护原因、预计时长及影响范围',true);
+    add('exec-93','执行配置','exec','关闭充提开关','Listing Ops','Yiyang Lu','执行时','在各站后台关闭对应链/币种的充提开关（全球站 + 印尼站）',true);
+    add('exec-94','执行配置','exec','全量切换为灰度模式','Listing Ops','Yiyang Lu','关充提后立即执行','关闭充提后同步将全量切换为灰度，确保维护期间只有白名单用户可见/可操作',true);
+    add('exec-95','执行配置','exec','灰度环境测试','技术/运营','Zhengfan Wang / Sam Wang','灰度期间','完成灰度环境下的测试验证，确认链路恢复正常后通知 Yiyang Lu',true);
+    add('launch-17','正式上线','launch','从灰度切回全量','Listing Ops','Yiyang Lu','测试完成后','收到 Zhengfan Wang / Sam Wang 确认后，将灰度切回全量，恢复正常上线状态',true);
+    add('launch-18','正式上线','launch','重新开启充提开关','Listing Ops','Yiyang Lu','切回全量后','确认全量恢复正常后，重新开启各站的充提开关',true);
+  }
+
+  // EXECUTION — 理财代币（HK专属）
+  if (product==='WealthToken') {
+    add('exec-96','执行配置','exec','收集并填写上币参数','Listing Ops','Freya Yu / Eyang / Teddy','上线前','收集香港站标准上币所需参数（代币信息、合规文件、风险参数等），由 Freya 团队、Eyang 和 Teddy 共同提供',true);
+    add('exec-97','执行配置','exec','收集 Logo','Listing Ops','Freya Yu / Eyang / Teddy','上线前','收集代币 Logo 文件（SVG + PNG 格式），尽早提供，App 端通知 Darcy Zhu 更新');
+    add('exec-98','执行配置','exec','合约地址','Listing Ops','Freya Yu / Eyang / Teddy','上线前','填写代币合约地址',false,'text','contractAddress');
+    add('exec-99','执行配置','exec','净值价格','Listing Ops','Freya Yu / Eyang / Teddy','上线前','填写代币净值价格（NAV Price）',false,'text','navPrice');
+    add('exec-100','执行配置','exec','风险等级','Listing Ops','Freya Yu / Eyang / Teddy','上线前','选择产品风险等级',false,'select','riskLevel',['High','Aggressive','Complex','Low']);
+    add('exec-101','执行配置','exec','参数准备','Listing Ops','Freya Yu / Eyang / Teddy','上线前','确认所有参数（合约地址、净值价格、风险等级、Logo）已准备完毕，可提交 Lark Sheet',true);
+    add('exec-102','执行配置','exec','钱包侧完成部署','钱包','Huaxi Li','上线前','钱包侧完成代币链上部署配置，Huaxi Li 在群里确认',true);
+    add('exec-103','执行配置','exec','【测试 ①】Spirit 配置测试环境','TechOps','Spirit','提前≥1周','Spirit 在测试环境完成代币/参数配置。\n⚠️ 以下测试环节整体需提前约一周完成，不能压到上线前一两天',true);
+    add('exec-104','执行配置','exec','【测试 ②】Hulk 在测试环境做测试','QA','Hulk','Spirit 配置完成后','Hulk 在测试环境执行功能测试，验证代币展示、参数、交互流程均符合预期。\n测试通过后通知 Spirit 推进生产环境配置',true);
+    add('exec-105','执行配置','exec','【测试 ③】Spirit 配置生产环境','TechOps','Spirit','测试环境通过后','Spirit 将配置从测试环境推送至生产环境。\n⚠️ 生产环境配置完成后才可进行生产环境测试',true);
+    add('exec-106','执行配置','exec','【测试 ④】Hulk 在生产环境做测试','QA','Hulk','Spirit 生产配置完成后','Hulk 在生产环境执行最终验证测试，确认代币参数、展示、交互与测试环境一致且无异常。\n测试通过后方可进入提交 Lark Sheet 流程',true);
+    add('exec-107','执行配置','exec','将参数更新到 Lark Sheet','Listing Ops','Freya Yu / Eyang / Teddy','生产测试通过后','将所有参数填写并更新到对应 Lark Sheet 表格：\nhttps://osl-global.sg.larksuite.com/wiki/Z9C8wV2LRiRcslksYQ4lBFoSgnh?sheet=3z0AVW',true);
+    add('launch-19','正式上线','launch','确认参数已提交完成','Listing Ops','Freya Yu','提交后','确认 Lark Sheet 中所有参数已填写完整，无遗漏。\n⚠ 理财代币不开充提，不配置后台币对，仅上链参数提交即完成',true);
+  }
+
+  // 《SOP》上币&币对流程（Global + 印尼站）— 钱包与后台参数
+  if ((site==='Global' || site==='ID') && product!=='ChainOnly' && product!=='Maintenance') {
+    add('exec-sop01','执行配置','exec','填写上币上链配置表参数（币种 + 币链扩展信息）','Listing Ops','Huaxi Li 检查确认','钱包部署前','Global站/ID站上币上链配置表，填完必须找 Huaxi Li 检查确认后再往下走',true,'text','上链配置表链接');
+    add('exec-sop02','执行配置','exec','群里通知钱包团队部署与验证','钱包','Huaxi Li','参数检查通过后','钱包会验证充提、交易等功能，等 Huaxi Li 通知后再做后台参数配置');
+    add('exec-sop03','执行配置','exec','后台参数配置（需拉上 Steven Zhou 一起）','Listing Ops / 技术','Huaxi Li 通知后 → Steven Zhou','钱包部署完成后','⚠ 系统地址归集额度要填「最小出金数量」——交易金额很小时不归集到地址，所以要限制。系统/个人冷转热、热转冷地址：Global 查 global信息统计，印尼站待补',true);
+    add('exec-sop04','执行配置','exec','填写 MM 参数表并通知做市商','Listing Ops','做市商','币对参数配置后','后台配置完币对参数后填 MM 参数表，再通知 MM');
+  }
+
+  // 通用：钱包侧完成部署 + 充提验证（所有非仅上链、非理财代币）
+  if (product!=='ChainOnly' && product!=='WealthToken' && product!=='Maintenance') {
+    add('exec-108','执行配置','exec','确认钱包侧完成部署 + 充提验证','钱包','Huaxi Li（在群里通知完成）','等待 Huaxi 通知','Huaxi Li 完成链上部署后会在群里发通知。\n收到通知后执行充提验证：充值测试 → 提现测试 → 确认到账',true);
+  }
+
+  // 通用：Global + ID 通知 MM 更新交易参数表格（仅 Orderbook）
+  if ((site==='Global' || site==='ID') && product==='Orderbook') {
+    add('exec-109','执行配置','exec','通知 MM 交易参数并更新至共享表格','Listing Ops','Rebeca Zhang / Freya Yu','上线前','将交易参数更新至 MM 共享 Google Sheets 表格，并通知 MM：\nhttps://docs.google.com/spreadsheets/d/18UVobtX7Cn1Pe3Y9BImPvK4VHLs60nr9rFtN0ExY9Ko/edit?pli=1&gid=1650980545#gid=1650980545',true);
+  }
+
+  // 《SOP》日常上币-运营位 banner（每次上币都要）
+  if (product!=='Maintenance') {
+    add('exec-sop11','执行配置','exec','在 Listing 设计群提交两个 banner 表单（上币公告 banner + 运营位 banner）','Listing Ops','Leo Ji','拿到上线时间后','两个表单都要填：上币公告 banner、运营位 banner。文案可以用工具里的「🖼 Banner 文案」一键生成');
+    const bannerJump =
+      product==='Orderbook' ? '跳 Pro Trade 的该交易对' :
+      product==='RFQ'       ? '跳 Flash Trade 的该交易对' :
+      product==='OTC'       ? '跳公告链接' :
+      product==='ChainOnly' ? '跳公告链接' :
+      product==='Perp'      ? '跳合约交易页' : '跳公告链接';
+    const bannerWhy =
+      product==='Orderbook' ? '有 Orderbook，优先跳 Pro Trade' :
+      product==='RFQ'       ? '没有 Orderbook，跳 RFQ 的 Flash Trade' :
+      product==='OTC'       ? '只有 OTC，没有交易页可跳' :
+      product==='ChainOnly' ? '仅上链没有交易对、没有交易页，只能跳公告' :
+      product==='Perp'      ? '合约产品，跳对应的合约交易页' : '没有固定交易页，默认跳公告';
+    add('exec-sop12','执行配置','exec','确定 banner 跳转链接 → ' + bannerJump,'Listing Ops','Lee Li（HK / Global 万能路由）','拿到 banner 后即可做，不用等上线','这个项目' + bannerJump + '（' + bannerWhy + '）。' + (product==='Orderbook'||product==='RFQ' ? '多个币对时选潜在交易量最大的那个。' : '') + '工具里「🖼 Banner 文案」会把拼好的跳转一起生成，直接复制',false,'text','banner跳转链接');
+    add('exec-sop13','执行配置','exec','在运营后台配置运营位（运营管理 → 运营配置管理）','Listing Ops','自行配置','币对上线后','6/10 起可以在运营后台自行配置运营位列表，图片直接本地导入，不用再走物料上传群');
+    add('exec-sop14','执行配置','exec','（已废弃·留档）物料上传群拿 URL + 找 Robben Luo 配置','Listing Ops','Peter Qiu / Robben Luo','——','6/10 之前的老流程，保留只为对照历史记录：运营位 banner 设计完发到全站物料上传群给 Peter Qiu（要注明站点和生产/测试环境）拿到一个 URL，再到 banner 对接群填运营资源维护表找 Robben Luo 配置上线。现在不用做了，可以直接标「跳过」');
+    add('launch-sop02','正式上线','launch','公告走 Lark 审批流（法务 + 合规审核）','Listing Ops / 法务 / 合规','——','发公告前','自 5/18 起所有公告都要走 Lark 审批流让法务与合规审核，审核完成后才可以发出',true);
+  }
+
+  // 通用：上线准备（非仅上链）— Rebeca / Freya / Eyang / Teddy
+  if (product!=='ChainOnly' && product!=='WealthToken' && product!=='Maintenance') {
+    add('exec-110','执行配置','exec','通知 MM 交易参数（价格精度 / 数量精度）并更新对外表格','Listing Ops','Rebeca Zhang / Freya Yu / Eyang','上线前','将每个交易对的价格精度（Price Precision）和数量精度（Quantity Precision）通知 MM，并更新到对外共享表格：\nhttps://docs.google.com/spreadsheets/d/18UVobtX7Cn1Pe3Y9BImPvK4VHLs60nr9rFtN0ExY9Ko/edit?pli=1&gid=0#gid=0',true);
+    add('exec-111','执行配置','exec','通知宣发群上线信息','Listing Ops','Rebeca Zhang / Freya Yu / Eyang / Teddy','上线前1天','在宣发群通知上线时间、币种、交易对、产品类型，附带链接或公告草稿');
+    if (product==='Orderbook') add('exec-112','执行配置','exec','通知 Puhui MM 借币','Listing Ops','Rebeca Zhang / Freya Yu','上线前','通知 Puhui 做市商提前安排借币，确保开盘时有足够流动性',true);
+    if (nc) add('exec-113','执行配置','exec','新链：补充 Gas Fee + 补充水位','Listing Ops / 钱包','Eyang → Huaxi Li','上线前','① 将 Gas Fee 充至链上钱包地址 ② 补充充提水位确保正常运转。新链必做',true);
+    add('exec-114','执行配置','exec','撰写上线公告','Marketing / Listing Ops','Freya Yu / Rebeca Zhang','上线前1天','公告内容：上线时间、交易对、产品类型、活动（如有）。需经合规审核，不得有误导性声明');
+    add('exec-115','执行配置','exec','申请宣发 Banner','Marketing','Freya Yu / Teddy','上线前3天','向设计团队提交 Banner 需求（尺寸、品牌规范、内容要点），用于 App / 网站宣传');
+    add('exec-116','执行配置','exec','开盘前配置白名单','Listing Ops','Rebeca Zhang / Eyang','开盘前','在系统后台配置交易白名单，确保开盘按计划进行',true);
+    add('launch-20','正式上线','launch','通知 MM 正式挂单','Listing Ops','Rebeca Zhang / Freya Yu','开盘时','开盘后立即通知做市商挂单，确保盘口流动性',true);
+  }
+
+
+  // 按阶段统一排序：前置确认 → 业务评估 → 合规/VAAP → 执行配置 → 正式上线。
+  // 各产品分支是分段 add 进来的，不排序的话执行配置和正式上线会交替出现好几轮。
+  // 同一阶段内保持写入顺序；正式上线再细排一次，确保宣发在最后（公告没审批完、充提没开就不能宣发）。
+  const PHASE_SEQ = { '前置确认':0, '业务评估':1, '合规/VAAP':2, '执行配置':3, '正式上线':4 };
+  const launchRank = (t) =>
+    /公告|审批/.test(t)                        ? 0 :
+    /开启|开关|白名单|开盘|显示|充提/.test(t)   ? 1 :
+    /通知|挂单|验证|划转|跨链|提币/.test(t)     ? 2 :
+    /流动性|面客/.test(t)                      ? 3 :
+    /宣发|Marketing/i.test(t)                  ? 5 : 4;
+  return s
+    .map((st, i) => ({ st, i }))
+    .sort((a, b) =>
+      ((PHASE_SEQ[a.st.phase] ?? 9) - (PHASE_SEQ[b.st.phase] ?? 9)) ||
+      (a.st.phase === '正式上线' ? launchRank(a.st.task) - launchRank(b.st.task) : 0) ||
+      (a.i - b.i))
+    .map(x => x.st);
+}
+
 function estimateTime(site, product, tokenType) {
   const nc = tokenType==='newchain';
   if (site==='HK' && product==='Orderbook') return nc?'约4–6周':'约3–4周';
@@ -514,6 +885,56 @@ function nthWorkingDayOfMonth(year, monthIdx, n) {
   }
 }
 function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+// 步骤改过名字的，这里留一条旧名 → 新 id 的对照，保证老记录的勾不会因为改名丢掉
+const STEP_RENAMES = {
+  '执行配置|【D-3】Listing Ops 提供上币参数': 'exec-79',
+  '执行配置|【D-3】研发提单准备 — 钱包侧': 'exec-80',
+  '执行配置|【D-3】研发提单准备 — 平台侧 + Setting limit 准备': 'exec-81',
+  '执行配置|【D-3】TradeOps + WalletOps 提供 Limit 参数': 'exec-82',
+  '执行配置|【D-2】研发提单审核 + 生产配置 — 钱包侧': 'exec-83',
+  '执行配置|【D-2】研发提单审核 + 生产配置 — 平台侧': 'exec-84',
+  '执行配置|【D-2】测试同步 Test Plan + Yiyang 准备测试币': 'exec-85',
+  '执行配置|【D-1】生产验证 + Limit setting 配置完成': 'exec-86',
+  '正式上线|【上线当天】划转 + 充提验证': 'launch-14',
+};
+
+// 一次性迁移：老记录的勾选/跳过/备注是按步骤序号存的，这里按「阶段+任务名」把它们对应到稳定 id。
+// 用冻结的 V1 清单还原当时的序号含义，所以之后往清单里插多少新步骤都不会影响这次对应关系。
+function migrateStepKeys(r) {
+  if (!r || r.stepKeysV2) return r;
+  try {
+    const opts = { stableHub: r.stableHub, launchpool: r.launchpool };
+    const oldList = buildChecklistV1(r.site, r.product, r.tokenType, opts) || [];
+    const newList = buildChecklist(r.site, r.product, r.tokenType, opts) || [];
+    const idByContent = {};
+    newList.forEach(st => {
+      const key = st.phase + '|' + st.task;
+      (idByContent[key] || (idByContent[key] = [])).push(st.id);
+    });
+    const occurrence = {};
+    const idByOldIndex = oldList.map(st => {
+      const key = st.phase + '|' + st.task;
+      const n = occurrence[key] || 0;
+      occurrence[key] = n + 1;
+      return (idByContent[key] || [])[n] || STEP_RENAMES[key];
+    });
+    let lost = 0;
+    const remap = (obj) => {
+      const out = {};
+      Object.entries(obj || {}).forEach(([k, v]) => {
+        const old = oldList[+k];
+        if (!old) { lost++; return; }
+        const id = idByOldIndex[+k];
+        if (id) out[id] = v; else lost++;
+      });
+      return out;
+    };
+    const migrated = { ...r, checked: remap(r.checked), naSteps: remap(r.naSteps), stepNotes: remap(r.stepNotes), stepKeysV2: true };
+    if (lost) console.warn('迁移时有', lost, '项没对上:', r.tokenName || r.id);
+    return migrated;
+  } catch (e) { console.error('迁移失败', r && r.id, e); return r; }
+}
+
 function countDone(checked, naSteps) {
   return Object.values(checked||{}).filter(Boolean).length
        + Object.values(naSteps||{}).filter(Boolean).length;
@@ -856,7 +1277,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
               const siteColor = siteInfo?.color || '#F5F0E6';
               const pendingCritical = isCancelled ? [] : checklist
                 .map((step,i)=>({...step,idx:i}))
-                .filter(step=>step.critical && !(r.checked||{})[step.idx]);
+                .filter(step=>step.critical && !(r.checked||{})[step.id]);
               return (
                 <div key={r.id} className="hover-card" style={{
                   background: isCancelled ? '#FFFFFF' : 'white',
@@ -938,7 +1359,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                       {/* Row 3: progress bar + step count */}
                       <div style={{display:'flex', alignItems:'center', gap:8, marginTop:6}}>
                         <div style={{flex:1, background:'#F5F0E6', borderRadius:99, height:5, overflow:'hidden', maxWidth:260}}>
-                          <div style={{width:`${pct}%`, height:'100%', background: pct===100? 'white' : isCancelled?'#6B6B6B':siteColor, borderRadius:99, transition:'width 0.3s'}}/>
+                          <div style={{width:`${pct}%`, height:'100%', background: pct===100?'#A8E6CF' : isCancelled?'#6B6B6B':siteColor, borderRadius:99, transition:'width 0.3s'}}/>
                         </div>
                         <span style={{fontSize:11, color:'#6B6B6B', whiteSpace:'nowrap'}}>{done}/{checklist.length} 步骤</span>
                       </div>
@@ -1031,7 +1452,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                           <div style={{display:'flex', alignItems:'center', gap:6}}>
                             <span style={{fontSize:12, fontWeight:600, color:'#2D2D2D', whiteSpace:'nowrap'}}>{done}/{total}</span>
                             <div style={{width:60, background:'#F5F0E6', borderRadius:99, height:5, overflow:'hidden', flexShrink:0}}>
-                              <div style={{width:`${pct}%`, height:'100%', background:pct===100? 'white' :isCancelled?'#6B6B6B':siteColor, borderRadius:99}}/>
+                              <div style={{width:`${pct}%`, height:'100%', background:pct===100?'#A8E6CF':isCancelled?'#6B6B6B':siteColor, borderRadius:99}}/>
                             </div>
                           </div>
                         </td>
@@ -1062,7 +1483,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
               const siteColor = siteInfo?.color || '#6B6B6B';
               const pendingCritical = isCancelled ? [] : checklist
                 .map((step,i)=>({...step,idx:i}))
-                .filter(step=>step.critical && !(r.checked||{})[step.idx]);
+                .filter(step=>step.critical && !(r.checked||{})[step.id]);
               return (
                 <div key={r.id} className="hover-card" style={{
                   background: isCancelled ? '#FFFFFF' : 'white', borderRadius:20,
@@ -1138,7 +1559,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                       </div>
                       <div style={{display:'flex', alignItems:'center', gap:8, marginTop:6}}>
                         <div style={{flex:1, background:'#F5F0E6', borderRadius:99, height:5, overflow:'hidden', maxWidth:260}}>
-                          <div style={{width:`${pct}%`, height:'100%', background:pct===100? 'white' :isCancelled?'#6B6B6B':siteColor, borderRadius:99, transition:'width 0.3s'}}/>
+                          <div style={{width:`${pct}%`, height:'100%', background:pct===100?'#A8E6CF':isCancelled?'#6B6B6B':siteColor, borderRadius:99, transition:'width 0.3s'}}/>
                         </div>
                         <span style={{fontSize:11, color:'#6B6B6B', whiteSpace:'nowrap'}}>{done}/{checklist.length} 步骤</span>
                       </div>
@@ -1952,17 +2373,17 @@ function AnnouncementView({ record, onClose, onUpdate }) {
   const joinZH = arr => arr.length===1?arr[0]:arr.slice(0,-1).join('、')+'和'+arr[arr.length-1];
 
   // Fixed disclaimer/about texts
-  const DIS_EN1 = `This content is provided by OSL Digital Securities Limited (“OSLDS”) solely for informational purposes and does not constitute, nor shall it be construed as, an offer, solicitation, or recommendation to purchase, sell, or subscribe to any securities, financial instruments, products, or services. This content does not constitute legal, tax, accounting, or financial advice, and recipients are advised to obtain independent professional advice prior to making any decisions or taking any action.\nOSLDS makes no representations or warranties, express or implied, as to the accuracy, completeness, or reliability of the information contained herein and disclaims all liability for any losses or damages arising from its use. Where third-party data or information is referenced, OSLDS makes no representation or endorsement as to the accuracy, completeness, or reliability of such data. All opinions, estimates, and information are as of the date hereof and may be subject to change without notice.`;
-  const DIS_EN2 = `<For the avoidance of doubt, this announcement is strictly intended for Professional Investors (as defined under the Securities and Futures Ordinance (Cap. 571) and its subsidiary legislation) and is not intended for distribution to, or use by, any person in any jurisdiction where such distribution or use would be contrary to applicable laws or regulations. It is the responsibility of any person who accesses this announcement to observe all applicable laws and regulations of their relevant jurisdiction.> Virtual assets involve significant risks. Please ensure you fully understand these risks before engaging in any trading activities. OSLDS shall not be liable for any losses arising from the use of or reliance on this announcement.`;
-  const ABOUT_EN = `As a subsidiary of the publicly listed OSL Group (HKEX: 863.HK), OSL Digital Securities is Hong Kong’s first and most established SFC-licensed and insured digital asset platform. Operating since 2018, the platform provides institutional-grade digital asset services to corporations, financial institutions, professional and retail investors.\nOSL Hong Kong delivers services across five core domains: OTC brokerage, Omnibus broker solutions, custody, wealth management, and retail services. The OTC brokerage services provide 24/7 high-liquidity crypto trading with fiat on/off-ramp services. Custody solutions feature client-asset segregated wallet management backed by US$1 billion insurance coverage. The wealth management suite offers crypto investments to traditional investors, including tokenised treasuries, RWAs, structured crypto products, and quant investment strategies. Retail services bring institution-grade security and crypto access to professional and retail investors.\nAs a pioneer in bridging traditional finance and the digital asset economy, OSL Group adheres to its core concept: Open, Secure, and Licensed, empowering the next generation of global financial infrastructure. In addition to Hong Kong, OSL Group expands operations under full regulatory compliance in Japan, Australia, Europe and beyond.`;
+  const DIS_EN1 = annTpl('HK','EN','dis1');
+  const DIS_EN2 = annTpl('HK','EN','dis2');
+  const ABOUT_EN = annTpl('HK','EN','about');
 
-  const DIS_ZH1 = `本内容由 OSL数字证券有限公司（“OSLDS”） 提供，仅供参考之用，不构成亦不应被视为购买、出售或认购任何证券、金融工具、产品或服务的要约、邀请或推荐。本内容不构成法律、税务、会计或财务建议，收件人应在做出任何决定或采取任何行动前，寻求独立的专业意见。OSLDS 对本内容的准确性、完整性或可靠性不作任何明示或暗示的陈述或保证，并对因使用本内容而产生的任何损失或损害不承担任何责任。若引用第三方数据或信息，OSLDS 对该等数据的准确性、完整性或可靠性不作任何陈述或认可。本免责声明所载的所有观点、估算及信息均截至本声明日期，并可能随时变更，恕不另行通知。`;
-  const DIS_ZH2 = `<为避免产生歧义，本公告仅面向专业投资者（定义见《证券及期货条例》（第 571 章）及其附属法例），并不拟向任何在其所属司法辖区内分发或使用本公告即构成违反适用法律或法规的个人或实体提供。任何查阅本公告的人士，均有责任遵守其所在司法辖区的所有适用法律及法规。>数字资产涉及重大风险，请在参与任何交易活动前充分了解相关风险。OSLDS 对因使用或依赖本公告而产生的任何损失概不承担责任。`;
-  const ABOUT_ZH = `OSL数字证券为OSL集团（863.HK）旗下的子公司，是香港首家获证监会发牌且受保的数字资产交易平台，自2018年起，平台专注为企业客户、金融机构、专业及个人投资者提供机构级金融解决方案。OSL香港提供五大核心服务：经纪业务、综合账户方案、资产托管、财富管理及交易所服务。其中经纪业务提供24小时高流动性加密货币交易及法币出入金服务；托管方案采用客户资产隔离的独立钱包管理，并提供10亿美元保险保障；财富管理包含代币化国债等创新投资产品；同时专业及零售投资者亦可透过交易所安全合规买卖加密货币。作为连接传统金融与数字资产经济的先驱，OSL香港以「开放、安全、持牌」为核心原则，持续推动亚洲合规数字资产生态发展，并以合规为先拓展业务版图，进军日本、澳洲、欧洲等市场，为全球客户提供安全、定制化的服务。`;
+  const DIS_ZH1 = annTpl('HK','SC','dis1');
+  const DIS_ZH2 = annTpl('HK','SC','dis2');
+  const ABOUT_ZH = annTpl('HK','SC','about');
 
-  const DIS_TC1 = `本內容由 OSL數字證券有限公司（“OSLDS”） 提供，僅供參考之用，不構成亦不應被視爲購買、出售或認購任何證券、金融工具、產品或服務的要約、邀請或推薦。本內容不構成法律、稅務、會計或財務建議，收件人應在做出任何決定或採取任何行動前，尋求獨立的專業意見。OSLDS 對本內容的準確性、完整性或可靠性不作任何明示或暗示的陳述或保證，並對因使用本內容而產生的任何損失或損害不承擔任何責任。若引用第三方數據或信息，OSLDS 對該等數據的準確性、完整性或可靠性不作任何陳述或認可。本免責聲明所載的所有觀點、估算及信息均截至本聲明日期，並可能隨時變更，恕不另行通知。`;
-  const DIS_TC2 = `<為避免產生歧義，本公告僅面向專業投資者（定義見《證券及期貨條例》（第 571 章）及其附屬法例），並不擬向任何在其所屬司法轄區內分發或使用本公告即構成違反適用法律或法規的個人或實體提供。任何查閱本公告的人士，均有責任遵守其所在司法轄區的所有適用法律及法規。>數字資產涉及重大風險，請在參與任何交易活動前充分了解相關風險。OSLDS 對因使用或依賴本公告而產生的任何損失概不承擔責任。`;
-  const ABOUT_TC = `OSL數字證券爲OSL集團（863.HK）旗下的子公司，是香港首家獲證監會發牌且受保的數字資產交易平臺，自2018年起，平臺專注爲企業客戶、金融機構、專業及個人投資者提供機構級金融解決方案。OSL香港提供五大核心服務：經紀業務、綜合賬戶方案、資產託管、財富管理及交易所服務。其中經紀業務提供24小時高流動性加密貨幣交易及法幣出入金服務；託管方案採用客戶資產隔離的獨立錢包管理，並提供10億美元保險保障；財富管理包含代幣化國債等創新投資產品；同時專業及零售投資者亦可透過交易所安全合規買賣加密貨幣。作爲連接傳統金融與數字資產經濟的先驅，OSL香港以「開放、安全、持牌」爲核心原則，持續推動亞洲合規數字資產生態發展，並以合規爲先拓展業務版圖，進軍日本、澳洲、歐洲等市場，爲全球客戶提供安全、定製化的服務。`;
+  const DIS_TC1 = annTpl('HK','TC','dis1');
+  const DIS_TC2 = annTpl('HK','TC','dis2');
+  const ABOUT_TC = annTpl('HK','TC','about');
 
   const TRADING_RULES_URL = 'https://www.osl.com/hk-en/support/article/kA0fv00000001nJCAQ?channel=7rm1br';
 
@@ -2281,9 +2702,9 @@ function AnnouncementViewGlobal({ record, onClose, onUpdate }) {
   const ABOUT_GLOBAL_ZH = `OSL集团（港交所代码：863）是亚洲领先的稳定币交易和支付平台，致力于在全球范围内提供合规高效的数字金融基础设施服务，赋能企业、金融机构和个人实现法币与数字货币之间的无缝兑换、支付、交易和结算。秉持<strong>开放、安全、合法</strong>的核心价值观，OSL集团致力于构建连接全球市场的更高效生态系统，实现全球范围内即时、无缝且合规的价值流动。`;
   const ABOUT_GLOBAL_TC = `OSL集團（港交所代碼：863）是亞洲領先的穩定幣交易和支付平台，致力於在全球範圍內提供合規高效的數位金融基礎設施服務，賦能企業、金融機構和個人實現法幣與數位貨幣之間的無縫兌換、支付、交易和結算。秉持<strong>開放、安全、合法</strong>的核心價值觀，OSL集團致力於建構連接全球市場的更有效率生態系統，實現全球即時、無縫且合規的價值流動。`;
 
-  const DIS_GLOBAL_EN = `This announcement is for informational purposes only and does not constitute financial, investment, or trading advice, nor an offer or solicitation to trade. OSL does not guarantee the accuracy or completeness of this information and shall not be held liable for its use. Digital assets are highly speculative, volatile, and may become illiquid; investors risk losing their entire investment. Information herein may not be suitable for all persons or permitted in certain jurisdictions. You are responsible for conducting your own research, evaluating your risk appetite, and ensuring compliance with local laws before trading. OSL Bermuda Limited is licensed to conduct digital asset business by the Bermuda Monetary Authority.`;
-  const DIS_GLOBAL_ZH = `本公告仅供参考，不构成财务，投资或交易建议，亦不构成任何交易要约，推荐或招揽。OSL 不保证此处信息的准确性或完整性，且不对因使用此类信息而产生的任何后果承担责任。数字资产具有高度投机性和波动性，且可能在任何时间失去流动性；投资者需承担损失全部投资本金的风险。本公告所含信息可能并不适用于所有人，或在某些司法管辖区不受法律允许。在进行交易前，您有责任自行研究、评估自身的风险承受能力，并确保遵守当地法律法规。OSL Bermuda Limited获百慕达金融管理局授权经营数字资产业务。`;
-  const DIS_GLOBAL_TC = `本公告僅供參考，不構成財務，投資或交易建議，亦不構成任何交易要約，推薦或招攬。OSL 不保證此處信息的準確性或完整性，且不對因使用此類信息而產生的任何後果承擔責任。數字資產具有高度投機性和波動性，且可能在任何時間失去流動性；投資者需承擔損失全部投資本金的風險。本公告所含信息可能並不適用於所有人，或在某些司法管轄區不受法律允許。在進行交易前，您有責任自行研究，評估自身的風險承受能力，並確保遵守當地法律法規。OSL Bermuda Limited獲百慕達金融管理局授權經營數字資產業務。`;
+  const DIS_GLOBAL_EN = annTpl('Global','EN','dis1');
+  const DIS_GLOBAL_ZH = annTpl('Global','SC','dis1');
+  const DIS_GLOBAL_TC = annTpl('Global','TC','dis1');
 
   const buildHTML = (lang) => {
     const isEN = lang==='EN', isZH = lang==='ZH';
@@ -2500,13 +2921,391 @@ ${aboutText ? `<p>${aboutText}</p>` : ''}
 }
 
 // ─── Checklist View ────────────────────────────────────────────────────────────
-function ChecklistView({ record, onBack, onUpdate, addToast }) {
+// ─── 运营位 Banner：跳转规则 + 三语文案生成 ──────────────────────────────────
+// 跳转规则来自《上币运营位banner需求梳理》：
+//   有 Orderbook 优先跳 Pro Trade 的该交易对；没有就跳 RFQ 的 Flash Trade；
+//   只有 OTC 就跳公告；多个币对时选潜在交易量最大的那个（工具判断不了，列出来让人点）。
+const BANNER_ROUTE_BASE = { HK:'', Global:'', ID:'' };   // 万能路由前缀，可在生成器里填一次存起来
+function bannerPairs(record) {
+  const sym = (record.tokenSymbol || record.tokenName || 'TOKEN').trim();
+  const qs = (record.quoteCurrencies || []).filter(Boolean);
+  return qs.length ? qs.map(q => sym + '/' + q) : [sym];
+}
+function bannerJumpPlan(record, chosenPair) {
+  const p = record.product;
+  const pair = chosenPair || bannerPairs(record)[0];
+  if (p === 'Orderbook')
+    return { kind:'spot', path:'trade/spot?currencyPair=' + pair, why:'有 Orderbook，跳 Pro Trade 的该交易对' };
+  if (p === 'RFQ')
+    return { kind:'flash', path:'trade/flash?currencyPair=' + pair, why:'没有 Orderbook，跳 RFQ 的 Flash Trade' };
+  if (p === 'OTC')
+    return { kind:'ann', path:'', why:'只有 OTC，跳公告链接（手动填公告地址）' };
+  if (p === 'ChainOnly' || p === 'Maintenance')
+    return { kind:'ann', path:'', why:'仅上链/网络维护，没有交易页，跳公告链接' };
+  return { kind:'ann', path:'', why:'这种产品类型没有固定交易页，默认跳公告' };
+}
+// 三种句式：新币上线 / 新交易对 / 一币多链，文案取自《【K】Banner 文案模板》和实际发过的 banner
+function bannerCopy(record, pairsText, chainName) {
+  const sym = (record.tokenSymbol || record.tokenName || 'TOKEN').trim();
+  const isPI = /PI|专业/.test(record.userType || '');
+  const p = record.product;
+  if (p === 'ChainOnly') return {
+    EN: sym + '\n' + 'Now Supporting ' + (chainName || '[Network]') + ' Network',
+    SC: sym + '\n' + '现已支持 ' + (chainName || '[网络]') + ' 网络',
+    TC: sym + '\n' + '現已支持 ' + (chainName || '[網絡]') + ' 網絡',
+  };
+  if (p === 'Orderbook') return {
+    EN: 'New Listing on Pro Trade\n' + pairsText + (isPI ? '\nFor Professional Investors Only' : ''),
+    SC: '专业交易上新\n' + pairsText + (isPI ? '\n为专业投资客户开放' : ''),
+    TC: '專業交易上新\n' + pairsText + (isPI ? '\n爲專業投資客戶開放' : ''),
+  };
+  if (p === 'RFQ') return {
+    EN: 'New Tokens Listing\n' + pairsText + '\nNow Live on Flash Trade',
+    SC: '新币上线\n' + pairsText + '\n在闪电交易上开放交易',
+    TC: '新幣上線\n' + pairsText + '\n在閃電交易上開放交易',
+  };
+  if (p === 'OTC') return {
+    EN: 'New Listing on OTC\n' + pairsText,
+    SC: '新币上线OTC\n' + pairsText,
+    TC: '新幣上線OTC\n' + pairsText,
+  };
+  return {
+    EN: 'New Tokens Listing\n' + pairsText,
+    SC: '新币上线\n' + pairsText,
+    TC: '新幣上線\n' + pairsText,
+  };
+}
+
+function BannerView({ record, onClose, onUpdate }) {
+  const bf = record.bannerFields || {};
+  const allPairs = bannerPairs(record);
+  const [pair, setPair] = useState(bf.pair || allPairs[0]);
+  const [jumpUrl, setJumpUrl] = useState(bf.jumpUrl || '');
+  const [listingDate, setListingDate] = useState(bf.listingDate ||
+    (record.expectedLaunchTime ? toLocalDateStr(new Date(record.expectedLaunchTime)) : ''));
+  const [copied, setCopied] = useState('');
+
+  const siteLabel = (SITES.find(x => x.id === record.site) || {}).label || record.site;
+  const chainName = (record.chains && record.chains.length)
+    ? (CHAINS.find(c => c.id === record.chains[0]) || {}).label || record.chains[0] : '';
+  const plan = bannerJumpPlan(record, pair);
+  const pairsText = allPairs.join(', ');
+  const copy = bannerCopy(record, pairsText, chainName);
+
+  const dateEN = listingDate
+    ? new Date(listingDate + 'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+    : '[Listing Date]';
+
+  const block = (lang) =>
+    '站点：' + siteLabel + '\n' +
+    'Listing Date：' + dateEN + '\n' +
+    '跳转：' + (jumpUrl || (plan.path ? '[万能路由]/' + plan.path : '[公告链接]')) + '\n\n' +
+    lang + '：\n' + copy[lang];
+  const all = ['EN','SC','TC'].map(block).join('\n\n──────────\n\n');
+
+  const doCopy = (txt, tag) => { navigator.clipboard.writeText(txt).then(() => { setCopied(tag); setTimeout(()=>setCopied(''), 1500); }); };
+  const save = () => {
+    onUpdate && onUpdate({ ...record, bannerFields: { pair, jumpUrl, listingDate }, updatedAt: new Date().toISOString() });
+  };
+
+  const card = { background:'white', border:'3px solid #2D2D2D', borderRadius:20, boxShadow:'4px 4px 0 #2D2D2D', padding:'12px 14px', marginBottom:12 };
+  const btn = (bg) => ({ background:bg, color:'#2D2D2D', border:'3px solid #2D2D2D', borderRadius:50, padding:'4px 14px', fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'3px 3px 0 #2D2D2D' });
+
+  return (
+    <div style={{position:'fixed', inset:0, background:'rgba(45,45,45,0.4)', zIndex:900, display:'flex', justifyContent:'flex-end'}}>
+      <div style={{width:620, maxWidth:'96vw', background:'#F5F0E6', height:'100%', overflowY:'auto', borderLeft:'3px solid #2D2D2D'}}>
+        <div style={{background:'#FFCBA4', padding:'14px 20px', borderBottom:'3px solid #2D2D2D', display:'flex', alignItems:'center', gap:12, position:'sticky', top:0, zIndex:2}}>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Fredoka One','ZCOOL XiaoWei',cursive", fontSize:16, color:'#2D2D2D'}}>🖼 运营位 Banner 文案</div>
+            <div style={{fontSize:12, color:'#2D2D2D', marginTop:2}}>{record.tokenName} · {siteLabel} · {record.product}</div>
+          </div>
+          <button className="btn" onClick={save} style={btn('#A8E6CF')}>保存</button>
+          <button className="btn" onClick={onClose} style={btn('#FFFFFF')}>✕ 关闭</button>
+        </div>
+
+        <div style={{padding:'14px 20px'}}>
+          <div style={card}>
+            <div style={{fontSize:13, fontWeight:700, marginBottom:8}}>跳转设置</div>
+            {allPairs.length > 1 && (
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:11, color:'#6B6B6B', marginBottom:4}}>多个币对，选潜在交易量最大的那个（规则里要求人工判断）</div>
+                <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                  {allPairs.map(p => (
+                    <button key={p} onClick={()=>setPair(p)}
+                      style={{fontSize:12, fontWeight:pair===p?700:500, padding:'2px 12px', borderRadius:50, cursor:'pointer',
+                        border:(pair===p?'3px':'2px')+' solid #2D2D2D', background:pair===p?'#FDE68A':'white', color:'#2D2D2D'}}>{p}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{fontSize:12, color:'#2D2D2D', background:'#FDE68A', border:'2px solid #2D2D2D', borderRadius:14, padding:'6px 10px', marginBottom:8}}>
+              建议跳转：{plan.path ? plan.path : '公告链接'}　<span style={{color:'#6B6B6B'}}>（{plan.why}）</span>
+            </div>
+            <div style={{fontSize:11, color:'#6B6B6B', marginBottom:4}}>最终跳转链接（万能路由拼好后贴这里，会写进文案）</div>
+            <input value={jumpUrl} onChange={e=>setJumpUrl(e.target.value)} placeholder={plan.path ? '[万能路由]/'+plan.path : '公告链接'}
+              style={{width:'100%', border:'2px solid #2D2D2D', borderRadius:50, padding:'5px 11px', fontSize:12, fontFamily:'inherit', outline:'none', boxSizing:'border-box'}}/>
+            <div style={{fontSize:11, color:'#6B6B6B', margin:'8px 0 4px'}}>Listing Date</div>
+            <input type="date" value={listingDate} onChange={e=>setListingDate(e.target.value)}
+              style={{border:'2px solid #2D2D2D', borderRadius:50, padding:'4px 10px', fontSize:12, fontFamily:'inherit'}}/>
+          </div>
+
+          <div style={{display:'flex', gap:8, marginBottom:10}}>
+            <button className="btn" onClick={()=>doCopy(all,'all')} style={btn('#A8D8F0')}>
+              {copied==='all' ? '✅ 已复制' : '📋 复制三语全文'}
+            </button>
+          </div>
+
+          {['EN','SC','TC'].map(lang => (
+            <div key={lang} style={card}>
+              <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6}}>
+                <span style={{fontSize:12, fontWeight:700, background:'#A8E6CF', border:'2px solid #2D2D2D', borderRadius:50, padding:'1px 10px'}}>{lang}</span>
+                <div style={{flex:1}}/>
+                <button className="btn" onClick={()=>doCopy(block(lang), lang)}
+                  style={{...btn('#FFFFFF'), padding:'2px 10px', fontSize:11, boxShadow:'2px 2px 0 #2D2D2D'}}>
+                  {copied===lang ? '已复制' : '复制'}
+                </button>
+              </div>
+              <pre style={{whiteSpace:'pre-wrap', fontSize:12, color:'#2D2D2D', lineHeight:1.8, fontFamily:'inherit', margin:0}}>{block(lang)}</pre>
+            </div>
+          ))}
+
+          <div style={{fontSize:11, color:'#6B6B6B', lineHeight:1.8}}>
+            句式按产品类型自动选：Orderbook 用「专业交易上新」，RFQ 用「闪电交易」，OTC 用「新币上线OTC」，
+            仅上链用「现已支持 X 网络」。香港站且用户类型是 PI 时会自动加上「为专业投资客户开放」。
+            文案如果跟你实际发的不一样，告诉我具体哪句，我改模板。
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 公告类型三：新交易对上线（币已经上过交易所，这次只是新增币对）───────────
+// 文案骨架照搬实际发过的三份：USDGO/HKD on RFQ、POL/HKD on Pro Trade、BTC/USDGO on Pro Trade
+function isExistingToken(record, allRecords) {
+  if (record.pairAnnFields && typeof record.pairAnnFields.isExisting === 'boolean')
+    return record.pairAnnFields.isExisting;               // 手动选过就以手动为准
+  const sym = (record.tokenSymbol || '').trim().toUpperCase();
+  if (!sym) return false;
+  return (allRecords || []).some(r =>
+    r.id !== record.id && !r.cancelled && r.site === record.site &&
+    (r.tokenSymbol || '').trim().toUpperCase() === sym);
+}
+const VENUE = {
+  Orderbook: { EN:'Pro Trade',   SC:'专业交易', TC:'專業交易' },
+  RFQ:       { EN:'Flash Trade', SC:'闪电交易', TC:'閃電交易' },
+  OTC:       { EN:'OTC',         SC:'场外交易', TC:'場外交易' },
+};
+
+// 公告用哪个模板，按用户给的规则判定：
+//   仅上链 → Support X on Y；已经上过交易所、这次只是新增币对 → 新交易对上线；其余（全新币）→ New Listing
+function annKind(record, allRecords) {
+  if (!record) return 'new';
+  if (record.product === 'ChainOnly') return 'chain';
+  if (isExistingToken(record, allRecords)) return 'pair';
+  return 'new';
+}
+
+function PairListingAnnouncementView({ record, onClose, onUpdate }) {
+  const f = record.pairAnnFields || {};
+  const [lang, setLang] = useState('EN');
+  const [copied, setCopied] = useState(false);
+  const [pairs, setPairs] = useState(f.pairs ||
+    (record.quoteCurrencies || []).map(q => (record.tokenSymbol || '') + '/' + q).join(', '));
+  const [listingTime, setListingTime] = useState(f.listingTime ||
+    (record.expectedLaunchTime ? fmtLaunchTime(record.expectedLaunchTime) : ''));
+  const [depositStatus, setDepositStatus] = useState(f.depositStatus || '已开放');
+  const [chainName, setChainName] = useState(f.chainName ||
+    ((record.chains && record.chains[0]) ? ((CHAINS.find(c => c.id === record.chains[0]) || {}).label || record.chains[0]) : ''));
+  const [extraNote, setExtraNote] = useState(f.extraNote || '');
+  const [aboutEN, setAboutEN] = useState(f.aboutEN || '');
+  const [aboutSC, setAboutSC] = useState(f.aboutSC || '');
+  const [aboutTC, setAboutTC] = useState(f.aboutTC || '');
+
+  const sym = (record.tokenSymbol || record.tokenName || '').trim();
+  const isHK = record.site === 'HK';
+  const siteName = isHK ? 'OSL HK' : 'OSL Global';
+  const venue = VENUE[record.product] || VENUE.Orderbook;
+  const isPI = /PI|专业/.test(record.userType || '');
+  const dep = { EN: depositStatus === '已开放' ? 'Opened' : depositStatus, SC: depositStatus, TC: depositStatus === '已开放' ? '已開放' : depositStatus };
+
+  const body = (L) => {
+    const v = venue[L];
+    if (L === 'EN') return [
+      '【EN】New Trading Pairs on ' + v + ': ' + pairs,
+      '',
+      'Dear ' + siteName + ' Clients,',
+      '',
+      'We are thrilled to announce the new listing of trading pairs: ' + pairs + '. The trading pair' +
+        (pairs.includes(',') ? 's are' : ' is') + ' available on ' + v +
+        (isPI ? ' for Professional Investors Only' : '') + '.',
+      '',
+      'Listing Schedule:',
+      'Deposit and Withdrawal Open: ' + dep.EN,
+      'Listing Time: ' + (listingTime || '[上线时间]'),
+      'Trading Pairs (' + v + '): ' + pairs,
+      isPI ? 'Supported User Type: Professional Investors Only' : '',
+      extraNote ? '' : null,
+      extraNote || null,
+      '',
+      chainName ? sym + ' deposits and withdrawals will be available via ' + chainName + '.' : '',
+      '',
+      'Note:',
+      'For trading rules of new pair listing, please refer to "Trading Rules" for more information.',
+      aboutEN ? '\n' + aboutEN : '',
+      '',
+      isHK ? 'OSL Digital Securities Limited' : 'OSL Global',
+      (listingTime || '').slice(0, 10),
+      '',
+      'Disclaimer',
+      annTpl(isHK ? 'HK' : 'Global', 'EN', 'dis1'),
+      isHK ? annTpl('HK', 'EN', 'dis2') : '',
+      isHK ? '\nAbout OSL Hong Kong\n' + annTpl('HK', 'EN', 'about') : '',
+    ].filter(x => x !== null).join('\n');
+
+    if (L === 'SC') return [
+      '【简中】新交易对上线' + v + '：' + pairs,
+      '',
+      '亲爱的' + siteName + '客户，',
+      '',
+      '我们很高兴地宣布' + siteName + ' 新交易对上线：' + pairs + '。新交易对将在' + v +
+        (isPI ? '为专业投资客户开放' : '开放') + '。',
+      '',
+      '上线时间安排：',
+      '充值和提现开放: ' + dep.SC,
+      '上线时间：' + (listingTime || '[上线时间]'),
+      '交易对（' + v + '）：' + pairs,
+      isPI ? '支持的客户类型: 仅限专业投资者' : '',
+      extraNote || null,
+      '',
+      chainName ? sym + '充值和提币可通过 ' + chainName + ' 网络进行。' : '',
+      '',
+      '注意：',
+      '有关新交易对上市的交易规则，请参阅“交易规则”以获取更多信息。',
+      aboutSC ? '\n' + aboutSC : '',
+      '',
+      isHK ? 'OSL数字证券有限公司' : 'OSL Global',
+      (listingTime || '').slice(0, 10),
+      '',
+      '免责声明',
+      annTpl(isHK ? 'HK' : 'Global', 'SC', 'dis1'),
+      isHK ? annTpl('HK', 'SC', 'dis2') : '',
+      isHK ? '\n关于OSL香港\n' + annTpl('HK', 'SC', 'about') : '',
+    ].filter(x => x !== null).join('\n');
+
+    return [
+      '【繁中】新交易對上線' + v + '：' + pairs,
+      '',
+      '親愛的' + siteName + '客戶，',
+      '',
+      '我們很高興地宣佈' + siteName + ' 新交易對上線：' + pairs + '。新交易對將在' + v +
+        (isPI ? '爲專業投資客戶開放' : '開放') + '。',
+      '',
+      '上線時間安排：',
+      '充值和提現開放: ' + dep.TC,
+      '上線時間：' + (listingTime || '[上線時間]'),
+      '交易對（' + v + '）：' + pairs,
+      isPI ? '支持的客戶類型: 僅限專業投資者' : '',
+      extraNote || null,
+      '',
+      chainName ? sym + '充值和提幣可通過 ' + chainName + ' 網絡進行。' : '',
+      '',
+      '注意：',
+      '有關新交易對上市的交易規則，請參閱“交易規則”以獲取更多信息。',
+      aboutTC ? '\n' + aboutTC : '',
+      '',
+      isHK ? 'OSL數字證券有限公司' : 'OSL Global',
+      (listingTime || '').slice(0, 10),
+      '',
+      '免責聲明',
+      annTpl(isHK ? 'HK' : 'Global', 'TC', 'dis1'),
+      isHK ? annTpl('HK', 'TC', 'dis2') : '',
+      isHK ? '\n關於OSL香港\n' + annTpl('HK', 'TC', 'about') : '',
+    ].filter(x => x !== null).join('\n');
+  };
+
+  const text = body(lang).replace(/\n{3,}/g, '\n\n');
+  const save = () => onUpdate && onUpdate({ ...record, pairAnnFields: {
+    ...(record.pairAnnFields || {}), pairs, listingTime, depositStatus, chainName, extraNote, aboutEN, aboutSC, aboutTC,
+  }, updatedAt: new Date().toISOString() });
+
+  const pill = (on) => ({ fontSize:12, fontWeight:on?700:500, padding:'3px 13px', borderRadius:50, cursor:'pointer',
+    border:(on?'3px':'2px')+' solid #2D2D2D', background:on?'#FDE68A':'white', color:'#2D2D2D' });
+  const inp = { width:'100%', border:'2px solid #2D2D2D', borderRadius:14, padding:'5px 9px', fontSize:12,
+    fontFamily:'inherit', outline:'none', boxSizing:'border-box' };
+  const card = { background:'white', border:'3px solid #2D2D2D', borderRadius:20, boxShadow:'4px 4px 0 #2D2D2D', padding:'12px 14px', marginBottom:12 };
+
+  return (
+    <div style={{position:'fixed', inset:0, background:'rgba(45,45,45,0.4)', zIndex:900, display:'flex', justifyContent:'flex-end'}}>
+      <div style={{width:680, maxWidth:'96vw', background:'#F5F0E6', height:'100%', overflowY:'auto', borderLeft:'3px solid #2D2D2D'}}>
+        <div style={{background:'#A8D8F0', padding:'14px 20px', borderBottom:'3px solid #2D2D2D', display:'flex', alignItems:'center', gap:10, position:'sticky', top:0, zIndex:2}}>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Fredoka One','ZCOOL XiaoWei',cursive", fontSize:16, color:'#2D2D2D'}}>📢 新交易对上线公告</div>
+            <div style={{fontSize:12, color:'#2D2D2D', marginTop:2}}>{record.tokenName} · {siteName} · {venue.SC}</div>
+          </div>
+          <button className="btn" onClick={save} style={{background:'#A8E6CF', border:'3px solid #2D2D2D', borderRadius:50, padding:'4px 14px', fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'3px 3px 0 #2D2D2D'}}>保存</button>
+          <button className="btn" onClick={onClose} style={{background:'white', border:'3px solid #2D2D2D', borderRadius:50, padding:'4px 14px', fontSize:12, fontWeight:700, cursor:'pointer'}}>✕ 关闭</button>
+        </div>
+
+        <div style={{padding:'14px 20px'}}>
+          <div style={card}>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+              <div><div style={{fontSize:11, color:'#6B6B6B', marginBottom:3}}>交易对（逗号分隔）</div>
+                <input value={pairs} onChange={e=>setPairs(e.target.value)} style={inp}/></div>
+              <div><div style={{fontSize:11, color:'#6B6B6B', marginBottom:3}}>上线时间</div>
+                <input value={listingTime} onChange={e=>setListingTime(e.target.value)} placeholder="2026-05-13 16:30(UTC+8)" style={inp}/></div>
+              <div><div style={{fontSize:11, color:'#6B6B6B', marginBottom:3}}>充提状态</div>
+                <input value={depositStatus} onChange={e=>setDepositStatus(e.target.value)} style={inp}/></div>
+              <div><div style={{fontSize:11, color:'#6B6B6B', marginBottom:3}}>充提网络</div>
+                <input value={chainName} onChange={e=>setChainName(e.target.value)} placeholder="Polygon / Solana / Bitcoin" style={inp}/></div>
+            </div>
+            <div style={{marginTop:10}}>
+              <div style={{fontSize:11, color:'#6B6B6B', marginBottom:3}}>特殊说明（可留空。像 USDGO/HKD 那种只支持单边买入，写在这里）</div>
+              <textarea rows={2} value={extraNote} onChange={e=>setExtraNote(e.target.value)} style={{...inp, resize:'vertical'}}/>
+            </div>
+          </div>
+
+          <div style={card}>
+            <div style={{fontSize:12, fontWeight:700, marginBottom:6}}>关于该代币（可留空；已经上过的币一般不用再介绍）</div>
+            {[['EN',aboutEN,setAboutEN],['简中',aboutSC,setAboutSC],['繁中',aboutTC,setAboutTC]].map(([l,v,set])=>(
+              <div key={l} style={{marginBottom:6}}>
+                <div style={{fontSize:11, color:'#6B6B6B', marginBottom:3}}>{l}</div>
+                <textarea rows={2} value={v} onChange={e=>set(e.target.value)} style={{...inp, resize:'vertical'}}/>
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:'flex', gap:6, marginBottom:10, alignItems:'center'}}>
+            {['EN','SC','TC'].map(l => <button key={l} onClick={()=>setLang(l)} style={pill(lang===l)}>{l==='EN'?'EN':l==='SC'?'简中':'繁中'}</button>)}
+            <div style={{flex:1}}/>
+            <button className="btn" onClick={()=>{navigator.clipboard.writeText(text).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1500);});}}
+              style={{background:copied?'#A8E6CF':'#FDE68A', border:'3px solid #2D2D2D', borderRadius:50, padding:'4px 16px', fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'3px 3px 0 #2D2D2D'}}>
+              {copied ? '✅ 已复制' : '📋 一键复制'}
+            </button>
+          </div>
+
+          <div style={{...card, background:'white'}}>
+            <pre style={{whiteSpace:'pre-wrap', fontSize:12, color:'#2D2D2D', lineHeight:1.8, fontFamily:'inherit', margin:0}}>{text}</pre>
+          </div>
+
+          <div style={{fontSize:11, color:'#6B6B6B', lineHeight:1.8}}>
+            免责声明和 OSL 介绍取自「📑 公告模板」，法务改了去那里改一次就行。
+            交易场所按记录的产品类型自动选：Orderbook 写专业交易、RFQ 写闪电交易、OTC 写场外交易。
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChecklistView({ record, onBack, onUpdate, addToast, allRecords }) {
   const checklist = useMemo(()=>buildChecklist(record.site, record.product, record.tokenType, {stableHub: record.stableHub, launchpool: record.launchpool}),[record]);
   const [expandedSteps, setExpandedSteps] = useState({});
   const [editNote, setEditNote] = useState(false);
   const [noteText, setNoteText] = useState(record.notes||'');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showAnn, setShowAnn] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTokenName, setEditTokenName] = useState(record.tokenName||'');
@@ -2627,7 +3426,15 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
   return (
     <div style={{height:'100%', overflowY:'auto'}}>
       {/* Announcement overlay */}
-      {showAnn && record.annFields && (
+      {showBanner && (
+        <BannerView record={record} onClose={()=>setShowBanner(false)} onUpdate={onUpdate}/>
+      )}
+
+      {showAnn && annKind(record, allRecords)==='pair' && (
+        <PairListingAnnouncementView record={record} onClose={()=>setShowAnn(false)} onUpdate={onUpdate}/>
+      )}
+
+      {showAnn && annKind(record, allRecords)!=='pair' && record.annFields && (
         record.annFields.annType==='GlobalOTC'
           ? <AnnouncementViewGlobal record={record} onClose={()=>setShowAnn(false)} onUpdate={onUpdate}/>
           : <AnnouncementView record={record} onClose={()=>setShowAnn(false)} onUpdate={onUpdate}/>
@@ -2713,9 +3520,10 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
           <button className="btn" onClick={onBack} style={{background:'#FFFFFF', border:'none', color:'#2D2D2D', borderRadius:16, padding:'6px 12px', cursor:'pointer', fontSize:13}}>← 返回列表</button>
           <button className="btn" onClick={()=>window.print()} style={{background:'#FFFFFF', border:'none', color:'#2D2D2D', borderRadius:16, padding:'6px 12px', cursor:'pointer', fontSize:13}}>🖨 打印</button>
           <button className="btn" onClick={openEditModal} style={{background:'#FFFFFF', border:'none', color:'#2D2D2D', borderRadius:16, padding:'6px 12px', cursor:'pointer', fontSize:13}}>✏ 编辑信息</button>
-          {record.annFields && (
+          {(record.annFields || annKind(record, allRecords)==='pair') && (
             <button className="btn" onClick={()=>setShowAnn(true)} style={{background:'#FFFFFF', border:'2px solid #2D2D2D', color:'#2D2D2D', borderRadius:16, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:700}}>📢 查看公告</button>
           )}
+            <button className="btn" onClick={()=>setShowBanner(true)} style={{background:'#FFCBA4', border:'2px solid #2D2D2D', color:'#2D2D2D', borderRadius:16, padding:'5px 11px', cursor:'pointer', fontSize:13, fontWeight:700}}>🖼 Banner 文案</button>
           {isCancelled
             ? <button className="btn" onClick={handleRestore} style={{marginLeft:'auto', background:'rgba(16,185,129,0.25)', border:'2px solid #2D2D2D', color:'#2D2D2D', borderRadius:16, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:600}}>↩ 恢复任务</button>
             : <button className="btn" onClick={()=>{setCancelReason('');setShowCancelModal(true);}} style={{marginLeft:'auto', background:'rgba(220,38,38,0.25)', border:'2px solid #2D2D2D', color:'#2D2D2D', borderRadius:16, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:600}}>✕ 取消任务</button>
@@ -2800,8 +3608,8 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
         {viewMode==='team' && (
           <div className="hl-card" style={{background:'white', borderRadius:20, padding:'12px 14px', marginBottom:11, border:'2px solid #2D2D2D', boxShadow:'4px 4px 0 #2D2D2D'}}>
             {lanes.map(({owner, steps})=>{
-              const doneCount = steps.filter(s=>checked[s.idx]||naSteps[s.idx]).length;
-              const currentStep = steps.find(s=>!checked[s.idx] && !naSteps[s.idx]);
+              const doneCount = steps.filter(s=>checked[s.id]||naSteps[s.id]).length;
+              const currentStep = steps.find(s=>!checked[s.id] && !naSteps[s.id]);
               const laneComplete = doneCount===steps.length;
               return (
                 <div key={owner} style={{marginBottom:12}}>
@@ -2812,12 +3620,12 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
                   </div>
                   <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
                     {steps.map(s=>{
-                      const isDone = !!checked[s.idx];
-                      const isNA = !isDone && !!naSteps[s.idx];
-                      const isCurrent = !!currentStep && s.idx===currentStep.idx;
+                      const isDone = !!checked[s.id];
+                      const isNA = !isDone && !!naSteps[s.id];
+                      const isCurrent = !!currentStep && s.id===currentStep.id;
                       return (
-                        <span key={s.idx}
-                          onClick={()=>{ if(s.inputType==='approval'){ addToast&&addToast('该步骤需由审批人逐一签字，不能手动勾选'); return; } toggle(s.idx); }}
+                        <span key={s.id}
+                          onClick={()=>{ if(s.inputType==='approval'){ addToast&&addToast('该步骤需由审批人逐一签字，不能手动勾选'); return; } toggle(s.id); }}
                           title={s.task + (s.contact?(' · '+s.contact):'')}
                           style={{fontSize:12, padding:'6px 11px', borderRadius:16, cursor:'pointer',
                             background:isDone?'#A8E6CF':isNA?'#F5F0E6':isCurrent?'#A8D8F0':'white',
@@ -2838,29 +3646,29 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
         {/* Phase groups */}
         {viewMode==='phase' && phases.map((phase,pi)=>{
           const pc = PHASE_COLORS[phase.tag]||PHASE_COLORS.exec;
-          const pd = phase.steps.filter(s=>checked[s.idx]).length;
+          const pd = phase.steps.filter(s=>checked[s.id]).length;
           return (
             <div key={pi} style={{marginBottom:10}}>
               <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6, padding:'0 4px'}}>
-                <div style={{background:pc.border, borderRadius:99, padding:'3px 12px', fontSize:12, fontWeight:700, color:'#2D2D2D'}}>{phase.name}</div>
+                <div style={{background:pc.bg, border:'2px solid #2D2D2D', borderRadius:99, padding:'2px 12px', fontSize:12, fontWeight:700, color:'#2D2D2D'}}>{phase.name}</div>
                 <div style={{fontSize:12, color:'#6B6B6B'}}>{pd}/{phase.steps.length} 完成</div>
               </div>
               {phase.steps.map(step=>{
-                const isDone = !!checked[step.idx];
-                const isNA   = !isDone && !!(naSteps[step.idx]);
-                const isExp  = !!expandedSteps[step.idx];
+                const isDone = !!checked[step.id];
+                const isNA   = !isDone && !!(naSteps[step.id]);
+                const isExp  = !!expandedSteps[step.id];
                 const hasNote = step.note && step.note.trim();
-                const myNote  = stepNotes[step.idx] || '';
-                const isEditingNote = editingStepNote === step.idx;
+                const myNote  = stepNotes[step.id] || '';
+                const isEditingNote = editingStepNote === step.id;
                 const bg = isDone ? '#A8E6CF' : isNA ? '#FFFFFF' : 'white';
                 const borderColor = isDone ? '#A8E6CF' : isNA ? '#F5F0E6' : step.critical ? '#F7C8D4' : '#F5F0E6';
                 const leftColor   = isDone ? '#2D2D2D' : isNA ? '#6B6B6B' : step.critical ? '#2D2D2D' : pc.border;
                 return (
-                  <div key={step.idx} style={{background:bg, border:'1px solid '+borderColor, borderLeft:'4px solid '+leftColor,
+                  <div key={step.id} style={{background:bg, border:'1px solid '+borderColor, borderLeft:'4px solid '+leftColor,
                     borderRadius:20, marginBottom:8, overflow:'hidden', boxShadow:'4px 4px 0 #2D2D2D', transition:'all 0.15s'}}>
                     <div style={{display:'flex', alignItems:'flex-start', padding:'11px 14px', gap:10}}>
                       {/* Done checkbox */}
-                      <div onClick={()=>{ if(step.inputType==='approval'){ addToast&&addToast('该步骤需由审批人逐一签字，不能手动勾选'); return; } toggle(step.idx); }} style={{width:22,height:22,borderRadius:14,
+                      <div onClick={()=>{ if(step.inputType==='approval'){ addToast&&addToast('该步骤需由审批人逐一签字，不能手动勾选'); return; } toggle(step.id); }} style={{width:22,height:22,borderRadius:14,
                         border:'2px solid #2D2D2D',
                         background:isDone?'#A8E6CF':'white', display:'flex',alignItems:'center',justifyContent:'center',
                         flexShrink:0, marginTop:2, cursor:'pointer', transition:'all 0.15s'}}>
@@ -2881,7 +3689,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
                         {step.inputType==='text' && !isNA && (
                           <div style={{marginTop:6}}>
                             <input value={stepFields[step.inputKey]||''}
-                              onChange={e=>setStepField(step.inputKey,e.target.value,step.idx)}
+                              onChange={e=>setStepField(step.inputKey,e.target.value,step.id)}
                               onClick={e=>e.stopPropagation()}
                               placeholder={`输入${step.task}…`}
                               style={{width:'100%',fontSize:13,border:'2px solid #2D2D2D',
@@ -2917,7 +3725,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
                                   并行会签 {nSigned}/{approvers.length}
                                 </span>
                                 <div style={{flex:1,height:5,background:'#F5F0E6',borderRadius:99,overflow:'hidden'}}>
-                                  <div style={{width:(approvers.length?nSigned/approvers.length*100:0)+'%',height:'100%',background:nSigned===approvers.length? 'white' :'#2D2D2D',transition:'width 0.2s'}}/>
+                                  <div style={{width:(approvers.length?nSigned/approvers.length*100:0)+'%',height:'100%',background:nSigned===approvers.length?'#A8E6CF':'#FDE68A',transition:'width 0.2s'}}/>
                                 </div>
                                 {nSigned===approvers.length && <span style={{fontSize:11,fontWeight:700,color:'#2D2D2D'}}>🔓 已通过</span>}
                               </div>
@@ -2925,7 +3733,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
                                 {approvers.map(name=>{
                                   const at = signed[name];
                                   return (
-                                    <button key={name} onClick={()=>toggleApproval(step.inputKey,name,approvers,step.idx)}
+                                    <button key={name} onClick={()=>toggleApproval(step.inputKey,name,approvers,step.id)}
                                       title={at?('已签字：'+new Date(at).toLocaleString('zh-CN')):'点击签字'}
                                       style={{display:'flex',alignItems:'center',gap:5,fontSize:12,padding:'5px 11px',borderRadius:99,cursor:'pointer',
                                         border:`${(at) ? '3px' : '2px'} solid #2D2D2D`,background:at?'#A8E6CF':'white',
@@ -2959,28 +3767,28 @@ function ChecklistView({ record, onBack, onUpdate, addToast }) {
                               rows={2} style={{width:'100%',fontSize:12,border:'2px solid #2D2D2D',borderRadius:14,
                                 padding:'6px 8px',fontFamily:'inherit',resize:'vertical',outline:'none',boxSizing:'border-box'}}/>
                             <div style={{display:'flex',gap:6,marginTop:4}}>
-                              <button onClick={()=>saveStepNote(step.idx)} style={{background:'#FDE68A',color:'#2D2D2D',border:'3px solid #2D2D2D',borderRadius:14,padding:'4px 12px',fontSize:12,cursor:'pointer',fontWeight:600, boxShadow:'3px 3px 0 #2D2D2D'}}>保存</button>
+                              <button onClick={()=>saveStepNote(step.id)} style={{background:'#FDE68A',color:'#2D2D2D',border:'3px solid #2D2D2D',borderRadius:14,padding:'4px 12px',fontSize:12,cursor:'pointer',fontWeight:600, boxShadow:'3px 3px 0 #2D2D2D'}}>保存</button>
                               <button onClick={()=>setEditingStepNote(null)} style={{background:'none',border:'2px solid #2D2D2D',borderRadius:14,padding:'4px 10px',fontSize:12,cursor:'pointer',color:'#6B6B6B'}}>取消</button>
-                              {myNote && <button onClick={()=>{setStepNoteVal('');saveStepNote(step.idx);}} style={{background:'none',border:'2px solid #2D2D2D',borderRadius:14,padding:'4px 10px',fontSize:12,cursor:'pointer',color:'#2D2D2D'}}>清除</button>}
+                              {myNote && <button onClick={()=>{setStepNoteVal('');saveStepNote(step.id);}} style={{background:'none',border:'2px solid #2D2D2D',borderRadius:14,padding:'4px 10px',fontSize:12,cursor:'pointer',color:'#2D2D2D'}}>清除</button>}
                             </div>
                           </div>
                         )}
                       </div>
                       {/* Action buttons: N/A + Note + Expand */}
                       <div style={{display:'flex',gap:4,flexShrink:0,alignItems:'center',marginTop:2}}>
-                        <button onClick={e=>{e.stopPropagation();toggleNA(step.idx);}}
+                        <button onClick={e=>{e.stopPropagation();toggleNA(step.id);}}
                           title="标记为不需要"
                           style={{fontSize:11,fontWeight:600,padding:'3px 7px',borderRadius:12,cursor:'pointer',
                             background:isNA?'#F5F0E6':'none', color:isNA?'#6B6B6B':'#6B6B6B',
                             border:'2px solid #2D2D2D',
                             transition:'all 0.15s'}}>N/A</button>
-                        <button onClick={e=>{e.stopPropagation();setEditingStepNote(isEditingNote?null:step.idx);setStepNoteVal(myNote);}}
+                        <button onClick={e=>{e.stopPropagation();setEditingStepNote(isEditingNote?null:step.id);setStepNoteVal(myNote);}}
                           title="添加备注信息"
                           style={{fontSize:12,padding:'3px 6px',borderRadius:12,cursor:'pointer',
                             background:myNote?'#FDE68A':'none', color:myNote? '#2D2D2D' :'#6B6B6B',
                             border:'2px solid #2D2D2D'}}>📝</button>
                         {hasNote && (
-                          <button onClick={e=>{e.stopPropagation();setExpandedSteps(p=>({...p,[step.idx]:!p[step.idx]}));}}
+                          <button onClick={e=>{e.stopPropagation();setExpandedSteps(p=>({...p,[step.id]:!p[step.id]}));}}
                             style={{background:'none',border:'2px solid #2D2D2D',cursor:'pointer',fontSize:13,color:'#6B6B6B',padding:'3px 5px',borderRadius:12}}>
                             {isExp?'▲':'▼'}
                           </button>
@@ -3130,13 +3938,14 @@ function workingDaysUntil(isoDate) {
 }
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
-function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPhase }) {
+function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPhase , allRecords }) {
   const checklist = useMemo(()=>buildChecklist(record.site,record.product,record.tokenType,{stableHub:record.stableHub,launchpool:record.launchpool}),[record]);
   const [collapsedPhases, setCollapsedPhases] = useState({});
   const [editingStepNote, setEditingStepNote] = useState(null);
   const [stepNoteVal, setStepNoteVal] = useState('');
   const [showCopyMenu, setShowCopyMenu] = useState(false);
   const [showAnnPanel, setShowAnnPanel] = useState(false);
+  const [showBannerPanel, setShowBannerPanel] = useState(false);
   const phaseRefs = React.useRef({});
 
   // Scroll to phase when triggered from table
@@ -3204,7 +4013,15 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
       <style>{`@keyframes slideInPanel{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}.panel-step:hover{background:#FDE68A!important}`}</style>
 
       {/* Announcement overlay from panel */}
-      {showAnnPanel && record.annFields && (
+      {showBannerPanel && (
+        <BannerView record={record} onClose={()=>setShowBannerPanel(false)} onUpdate={onUpdate}/>
+      )}
+
+      {showAnnPanel && annKind(record, allRecords)==='pair' && (
+        <PairListingAnnouncementView record={record} onClose={()=>setShowAnnPanel(false)} onUpdate={onUpdate}/>
+      )}
+
+      {showAnnPanel && annKind(record, allRecords)!=='pair' && record.annFields && (
         record.annFields.annType==='GlobalOTC'
           ? <AnnouncementViewGlobal record={record} onClose={()=>setShowAnnPanel(false)} onUpdate={onUpdate}/>
           : <AnnouncementView record={record} onClose={()=>setShowAnnPanel(false)} onUpdate={onUpdate}/>
@@ -3276,7 +4093,7 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
       <div style={{padding:'9px 14px',borderBottom:'2px solid #2D2D2D',flexShrink:0}}>
         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
           <div style={{flex:1,background:'#F5F0E6',borderRadius:99,height:6,overflow:'hidden'}}>
-            <div style={{width:`${pct}%`,height:'100%',background:pct===100? 'white' :C.blue,borderRadius:99,transition:'width 0.3s'}}/>
+            <div style={{width:`${pct}%`,height:'100%',background:pct===100?'#A8E6CF':C.blue,borderRadius:99,transition:'width 0.3s'}}/>
           </div>
           <span style={{fontSize:12,fontWeight:700,color:pct===100?'#2D2D2D':C.navy,whiteSpace:'nowrap'}}>{done}/{total}</span>
           <span style={{fontSize:11,color:'#6B6B6B'}}>{pct}%</span>
@@ -3289,7 +4106,7 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
       {/* Phase steps - scrollable */}
       <div style={{flex:1,overflowY:'auto',padding:'4px 0',animation:'slideInPanel 0.18s ease'}}>
         {phases.map(ph=>{
-          const phDone = ph.steps.filter(s=>checked[s.idx]||naSteps[s.idx]).length;
+          const phDone = ph.steps.filter(s=>checked[s.id]||naSteps[s.id]).length;
           const phColor = PHASE_COLORS[ph.tag]||{border:'#6B6B6B',bg:'#FFFFFF',label:ph.name};
           const isCollapsed = !!collapsedPhases[ph.tag];
           return (
@@ -3304,17 +4121,17 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
               </div>
               {/* Steps */}
               {!isCollapsed && ph.steps.map(step=>{
-                const isDone  = !!checked[step.idx];
-                const isNA    = !!naSteps[step.idx];
-                const hasNote = !!stepNotes[step.idx];
-                const isEditN = editingStepNote===step.idx;
+                const isDone  = !!checked[step.id];
+                const isNA    = !!naSteps[step.id];
+                const hasNote = !!stepNotes[step.id];
+                const isEditN = editingStepNote===step.id;
                 const fieldVal = step.inputKey ? (stepFields[step.inputKey]||'') : '';
                 return (
-                  <div key={step.idx} className="panel-step"
+                  <div key={step.id} className="panel-step"
                     style={{borderBottom:'2px solid #2D2D2D',background:isDone?'#A8E6CF':isNA?'#FFFFFF':'white',opacity:isCancelled?0.6:1}}>
                     <div style={{display:'flex',alignItems:'center',gap:7,padding:'6px 12px'}}>
                       {/* Done checkbox */}
-                      <div onClick={()=>{ if(isCancelled)return; if(step.inputType==='approval')return; toggle(step.idx); }}
+                      <div onClick={()=>{ if(isCancelled)return; if(step.inputType==='approval')return; toggle(step.id); }}
                         style={{width:17,height:17,borderRadius:12,flexShrink:0,cursor:isCancelled||step.inputType==='approval'?'default':'pointer',
                           border:isDone?'none':'2px solid #2D2D2D',background:isDone?'#A8E6CF':'white',
                           display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -3333,7 +4150,7 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
                         {/* Text input field */}
                         {step.inputType==='text' && !isNA && (
                           <input value={fieldVal}
-                            onChange={e=>!isCancelled&&setStepField(step.inputKey,e.target.value,step.idx)}
+                            onChange={e=>!isCancelled&&setStepField(step.inputKey,e.target.value,step.id)}
                             onClick={e=>e.stopPropagation()}
                             placeholder={`输入${step.task}…`}
                             style={{width:'100%',fontSize:11,border:'2px solid #2D2D2D',
@@ -3365,7 +4182,7 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
                                 {approvers.map(name=>{
                                   const at=signed[name];
                                   return (
-                                    <button key={name} onClick={()=>!isCancelled&&toggleApproval(step.inputKey,name,approvers,step.idx)}
+                                    <button key={name} onClick={()=>!isCancelled&&toggleApproval(step.inputKey,name,approvers,step.id)}
                                       title={at?('已签字：'+new Date(at).toLocaleString('zh-CN')):'点击签字'}
                                       style={{fontSize:10,padding:'2px 7px',borderRadius:99,cursor:isCancelled?'default':'pointer',
                                         border:`${(at) ? '3px' : '2px'} solid #2D2D2D`,background:at?'#A8E6CF':'white',
@@ -3378,17 +4195,23 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
                             </div>
                           );
                         })()}
-                        {step.owner&&!step.inputType&&<div style={{fontSize:10,color:'#6B6B6B',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{step.owner}</div>}
+                        {(step.contact||step.owner)&&<div style={{fontSize:10,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                          {step.contact
+                            ? <span style={{color:'#2D2D2D',fontWeight:600}}>@{step.contact.split('\n').join(' / ').replace(/\s*\/\s*/g,' / ')}</span>
+                            : null}
+                          {step.contact&&step.owner ? <span style={{color:'#6B6B6B'}}>　·　{step.owner}</span> : null}
+                          {!step.contact&&step.owner ? <span style={{color:'#6B6B6B'}}>{step.owner}</span> : null}
+                        </div>}
                       </div>
                       {/* N/A */}
-                      <button onClick={e=>{e.stopPropagation();!isCancelled&&toggleNA(step.idx);}}
+                      <button onClick={e=>{e.stopPropagation();!isCancelled&&toggleNA(step.id);}}
                         style={{background:isNA?'#F5F0E6':'transparent',border:isNA?'none':'2px solid #2D2D2D',
                           borderRadius:12,padding:'2px 5px',fontSize:10,cursor:isCancelled?'default':'pointer',
                           color:isNA?'#2D2D2D':'#6B6B6B',fontWeight:isNA?700:400,flexShrink:0}}>
                         N/A
                       </button>
                       {/* Note */}
-                      <button onClick={e=>{e.stopPropagation();setEditingStepNote(isEditN?null:step.idx);setStepNoteVal(stepNotes[step.idx]||'');}}
+                      <button onClick={e=>{e.stopPropagation();setEditingStepNote(isEditN?null:step.id);setStepNoteVal(stepNotes[step.id]||'');}}
                         style={{background:hasNote?'#FDE68A':'transparent',border:hasNote?'2px solid #2D2D2D':'2px solid #2D2D2D',
                           borderRadius:12,padding:'2px 5px',fontSize:10,cursor:'pointer',
                           color:hasNote?'#2D2D2D':'#6B6B6B',flexShrink:0}}>
@@ -3399,18 +4222,18 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
                     {isEditN && (
                       <div style={{padding:'4px 14px 8px 38px',background:'#FDE68A'}}>
                         <input autoFocus value={stepNoteVal} onChange={e=>setStepNoteVal(e.target.value)}
-                          onKeyDown={e=>{if(e.key==='Enter')saveStepNote(step.idx);if(e.key==='Escape')setEditingStepNote(null);}}
+                          onKeyDown={e=>{if(e.key==='Enter')saveStepNote(step.id);if(e.key==='Escape')setEditingStepNote(null);}}
                           placeholder="添加备注..."
                           style={{width:'100%',fontSize:11,border:'2px solid #2D2D2D',borderRadius:12,padding:'4px 8px',outline:'none',fontFamily:'inherit',boxSizing:'border-box'}}/>
                         <div style={{display:'flex',gap:4,marginTop:4}}>
-                          <button onClick={()=>saveStepNote(step.idx)} style={{background:'#FDE68A',color:'#2D2D2D',border:'3px solid #2D2D2D',borderRadius:12,padding:'3px 10px',fontSize:11,cursor:'pointer',fontWeight:600, boxShadow:'3px 3px 0 #2D2D2D'}}>保存</button>
+                          <button onClick={()=>saveStepNote(step.id)} style={{background:'#FDE68A',color:'#2D2D2D',border:'3px solid #2D2D2D',borderRadius:12,padding:'3px 10px',fontSize:11,cursor:'pointer',fontWeight:600, boxShadow:'3px 3px 0 #2D2D2D'}}>保存</button>
                           <button onClick={()=>setEditingStepNote(null)} style={{background:'none',border:'2px solid #2D2D2D',borderRadius:12,padding:'3px 8px',fontSize:11,cursor:'pointer',color:'#6B6B6B'}}>取消</button>
                         </div>
                       </div>
                     )}
                     {/* Saved note */}
                     {!isEditN&&hasNote&&(
-                      <div style={{padding:'2px 14px 5px 38px',fontSize:10,color:'#2D2D2D',background:'#FDE68A'}}>📌 {stepNotes[step.idx]}</div>
+                      <div style={{padding:'2px 14px 5px 38px',fontSize:10,color:'#2D2D2D',background:'#FDE68A'}}>📌 {stepNotes[step.id]}</div>
                     )}
                   </div>
                 );
@@ -3753,7 +4576,7 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
         {/* # */}
         <td style={{padding:'8px', textAlign:'center', color:'#6B6B6B', fontSize:11, width:36, cursor:'default'}}>{idx+1}</td>
         {/* 项目名称 — click opens panel */}
-        <td onClick={()=>setPanelId(isSelected?null:r.id)} style={{padding:'7px 9px', fontWeight:600, color: isSelected?C.blue:'#2D2D2D', fontSize:13,
+        <td onClick={()=>setPanelId(isSelected?null:r.id)} style={{padding:'7px 9px', fontWeight:600, color:'#2D2D2D', fontSize:13,
           cursor:'pointer', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:180}}>
           {r.tokenSymbol || (r.tokenName||'').split('/')[0]}
         </td>
@@ -3821,7 +4644,7 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
         <td style={{padding:'7px 9px'}}>
           <div style={{display:'flex', alignItems:'center', gap:5, cursor:'pointer'}} onClick={()=>setPanelId(isSelected?null:r.id)}>
             <div style={{width:36, background:'#F5F0E6', borderRadius:99, height:4, overflow:'hidden', flexShrink:0}}>
-              <div style={{width:`${pct}%`, height:'100%', background:pct===100? 'white' :C.blue, borderRadius:99, transition:'width .3s'}}/>
+              <div style={{width:`${pct}%`, height:'100%', background:pct===100?'#A8E6CF':C.blue, borderRadius:99, transition:'width .3s'}}/>
             </div>
             <span style={{fontSize:11, color:'#6B6B6B', whiteSpace:'nowrap'}}>{done}/{cl.length}</span>
           </div>
@@ -3830,7 +4653,7 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
         {siteFilter && PHASE_COLS.map(p => {
           const ps = cl.map((step,i)=>({...step,idx:i})).filter(s=>s.phase===p.phaseName);
           if (ps.length===0) return <td key={p.key} style={{padding:'5px 4px', textAlign:'center'}}><span style={{color:'#2D2D2D',fontSize:11}}>—</span></td>;
-          const phDone = ps.filter(s=>(r.checked||{})[s.idx]||(r.naSteps||{})[s.idx]).length;
+          const phDone = ps.filter(s=>(r.checked||{})[s.id]||(r.naSteps||{})[s.id]).length;
           const allDone = phDone===ps.length;
           const someDone = phDone>0;
           const PHASE_BG = {pre:allDone?'#A8E6CF':someDone?'#FDE68A':'#F5F0E6',bd:allDone?'#A8E6CF':someDone?'#A8D8F0':'#F5F0E6',compliance:allDone?'#A8E6CF':someDone?'#D4A5E8':'#F5F0E6',exec:allDone?'#A8E6CF':someDone?'#A8E6CF':'#F5F0E6',launch:allDone?'#A8E6CF':someDone?'#D4A5E8':'#F5F0E6'};
@@ -3866,7 +4689,7 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
       const phases = PHASE_NAMES.map(p=>{
         const ps = cl.map((s,idx)=>({...s,idx})).filter(s=>s.phase===p.phaseName);
         if (!ps.length) return 'N/A';
-        const pd = ps.filter(s=>(r.checked||{})[s.idx]||(r.naSteps||{})[s.idx]).length;
+        const pd = ps.filter(s=>(r.checked||{})[s.id]||(r.naSteps||{})[s.id]).length;
         return `${pd}/${ps.length}`;
       });
       return [
@@ -4015,6 +4838,7 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
           onOpenFull={onOpen}
           onCopy={onCopy}
           scrollToPhase={panelPhase}
+          allRecords={records}
         />
       )}
 
@@ -4104,6 +4928,7 @@ function Sidebar({ page, onPage, records }) {
         <div style={{padding:'10px 16px 4px', fontSize:11, color:'#2D2D2D', fontWeight:600, letterSpacing:0.5}}>工具</div>
         <NavItem id="usdgo_budget" icon="💰" label="USDGO 预算" />
         <NavItem id="task_board" icon="🗂" label="任务清单" />
+        <NavItem id="ann_templates" icon="📑" label="公告模板" />
       </div>
       {/* Footer */}
       <div style={{padding:'10px 14px', borderTop:'2px solid #2D2D2D', fontSize:11, color:'#2D2D2D'}}>
@@ -4968,17 +5793,109 @@ function digestToText(d) {
   }
   return L.join('\n');
 }
-// 调 Vercel Serverless Function 让 AI 把结构化数据写成成段周报（GEMINI_API_KEY 存在 Vercel 环境变量里）
+// 调 Supabase Edge Function 让 AI 把结构化数据写成成段周报（key 存在服务端）
 async function generateAIWeekly(digest) {
-  const res = await fetch('/api/weekly-report', {
+  const res = await fetch(SUPABASE_URL + '/functions/v1/weekly-report', {
     method: 'POST',
-    headers: { 'Content-Type':'application/json' },
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
     body: JSON.stringify({ digest }),
   });
   if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0,200));
   const j = await res.json();
   if (j.error) throw new Error(j.error);
   return j.text;
+}
+
+function AnnTemplateView({ addToast }) {
+  const [tpl, setTpl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [site, setSite] = useState('HK');
+  const [lang, setLang] = useState('EN');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { (async () => {
+    const cloud = await loadAnnTemplates();
+    const local = loadAnnTplLocal();
+    const v = JSON.parse(JSON.stringify(cloud || local || ANN_TPL_DEFAULT));
+    setTpl(v); ANN_TPL = v; setLoading(false);
+  })(); }, []);
+
+  if (loading || !tpl) return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#6B6B6B',fontSize:14}}>加载中...</div>;
+
+  const cur = (tpl[site] && tpl[site][lang]) || { dis1:'', dis2:'', about:'' };
+  const setField = (f, v) => setTpl(p => ({ ...p, [site]: { ...p[site], [lang]: { ...p[site][lang], [f]: v } } }));
+  const save = async () => {
+    setSaving(true);
+    const next = { ...tpl, updatedAt: new Date().toISOString() };
+    const ok = await syncAnnTemplates(next);
+    setTpl(next); ANN_TPL = next; setSaving(false);
+    addToast && addToast(ok ? '✅ 模板已保存，之后生成的公告会用新文案' : '⚠️ 云端没存上（表可能还没建），已先存到本机');
+  };
+  const reset = () => {
+    const d = JSON.parse(JSON.stringify(ANN_TPL_DEFAULT));
+    setTpl(d); ANN_TPL = d;
+    addToast && addToast('已恢复成内置文案，记得点保存');
+  };
+
+  const pill = (on) => ({ fontSize:12, fontWeight:on?700:500, padding:'3px 13px', borderRadius:50, cursor:'pointer',
+    border:(on?'3px':'2px')+' solid #2D2D2D', background:on?'#FDE68A':'white', color:'#2D2D2D' });
+  const box = { width:'100%', border:'2px solid #2D2D2D', borderRadius:14, padding:'8px 10px', fontSize:12,
+    fontFamily:'inherit', lineHeight:1.7, outline:'none', resize:'vertical', boxSizing:'border-box' };
+  const card = { background:'white', border:'3px solid #2D2D2D', borderRadius:20, boxShadow:'4px 4px 0 #2D2D2D', padding:'12px 14px', marginBottom:12 };
+
+  return (
+    <div style={{flex:1, overflowY:'auto', padding:'16px 20px'}}>
+      <div style={{maxWidth:860, margin:'0 auto'}}>
+        <div style={{fontFamily:"'Fredoka One','ZCOOL XiaoWei',cursive", fontSize:18, color:'#2D2D2D', marginBottom:4}}>📑 公告模板</div>
+        <div style={{fontSize:13, color:'#6B6B6B', marginBottom:12}}>
+          免责声明和 OSL 介绍会随法务要求变动。在这里改一次，之后生成的公告自动用新文案，不用再翻旧公告复制。
+          {tpl.updatedAt && <span>　最后更新：{fmtTimestamp(tpl.updatedAt)}</span>}
+        </div>
+
+        <div style={{display:'flex', gap:6, marginBottom:12, flexWrap:'wrap', alignItems:'center'}}>
+          <span style={{fontSize:12, color:'#6B6B6B'}}>站点</span>
+          <button onClick={()=>setSite('HK')} style={pill(site==='HK')}>🇭🇰 香港站（OSLDS）</button>
+          <button onClick={()=>setSite('Global')} style={pill(site==='Global')}>🌐 国际站 / 印尼站（OSL 集团）</button>
+          <span style={{width:1, height:18, background:'#2D2D2D', margin:'0 4px'}}/>
+          {['EN','SC','TC'].map(l => <button key={l} onClick={()=>setLang(l)} style={pill(lang===l)}>{l}</button>)}
+          <div style={{flex:1}}/>
+          <button className="btn" onClick={reset} style={{...pill(false), background:'white'}}>恢复内置文案</button>
+          <button className="btn" onClick={save} disabled={saving}
+            style={{fontSize:12, fontWeight:700, padding:'4px 16px', borderRadius:50, cursor:'pointer',
+              border:'3px solid #2D2D2D', background:'#A8E6CF', color:'#2D2D2D', boxShadow:'3px 3px 0 #2D2D2D'}}>
+            {saving ? '保存中…' : '保存'}
+          </button>
+        </div>
+
+        <div style={card}>
+          <div style={{fontSize:13, fontWeight:700, marginBottom:6}}>免责声明</div>
+          <textarea rows={10} value={cur.dis1} onChange={e=>setField('dis1', e.target.value)} style={box}/>
+        </div>
+
+        {site==='HK' && (
+          <div style={card}>
+            <div style={{fontSize:13, fontWeight:700, marginBottom:6}}>免责声明 · 第二段（专业投资者声明，用尖括号包住的部分只在 PI 公告里出现）</div>
+            <textarea rows={7} value={cur.dis2} onChange={e=>setField('dis2', e.target.value)} style={box}/>
+          </div>
+        )}
+
+        {site==='HK' && (
+          <div style={card}>
+            <div style={{fontSize:13, fontWeight:700, marginBottom:6}}>关于 OSL</div>
+            <textarea rows={8} value={cur.about} onChange={e=>setField('about', e.target.value)} style={box}/>
+          </div>
+        )}
+
+        <div style={{fontSize:11, color:'#6B6B6B', lineHeight:1.8, background:'#FDE68A', border:'2px solid #2D2D2D', borderRadius:14, padding:'8px 12px'}}>
+          第一次用需要在 Supabase 跑一次建表 SQL（跟之前建任务表一样）：<br/>
+          <code style={{fontSize:11}}>create table if not exists ann_templates (id text primary key, data jsonb not null, updated_at timestamptz default now());</code><br/>
+          <code style={{fontSize:11}}>alter table ann_templates enable row level security;</code><br/>
+          <code style={{fontSize:11}}>create policy "public access" on ann_templates for all using (true) with check (true);</code><br/>
+          没建表之前也能用，改动会先存在本机，公告照常生成。
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function TaskBoardView({ addToast }) {
@@ -5392,7 +6309,7 @@ function TaskBoardView({ addToast }) {
                   </div>
                   {aiErr
                     ? <div style={{fontSize:12, color:'#2D2D2D', background:'#F7C8D4', border:'2px solid #2D2D2D', borderRadius:14, padding:'8px 10px'}}>
-                        生成失败：{aiErr}　<br/>如果提示未配置 GEMINI_API_KEY，请到 Vercel 项目 Settings → Environment Variables 添加后重新部署；也可以先用「📋 复制清单」。
+                        生成失败：{aiErr}　<br/>如果还没部署 Edge Function，可以先用「📋 复制清单」。
                       </div>
                     : <div style={{fontSize:13, color:'#2D2D2D', whiteSpace:'pre-wrap', lineHeight:1.8}}>{aiText}</div>}
                 </div>
@@ -5523,6 +6440,7 @@ function App() {
 
   // 初始加载 + 本地数据迁移 + 实时同步
   useEffect(() => {
+    loadAnnTemplates().then(v => { if (v) ANN_TPL = v; else { const l = loadAnnTplLocal(); if (l) ANN_TPL = l; } });
     loadRecordsFromDB().then(async cloudData => {
       // 检查 localStorage 是否有旧数据需要迁移
       const LOCAL_KEY = 'osl_listing_records_v2';
@@ -5537,15 +6455,22 @@ function App() {
           await Promise.all(toMigrate.map(r => syncRecord(r)));
         }
         // 合并云端已有 + 本地迁移的
-        const merged = [...cloudData, ...toMigrate];
+        const merged = [...cloudData, ...toMigrate].map(migrateStepKeys);
         setRecords(merged);
+        await Promise.all(merged.filter(r=>r.stepKeysV2).map(r => syncRecord(r)));
         // 清除本地缓存，防止重复迁移
         localStorage.removeItem(LOCAL_KEY);
         if (toMigrate.length > 0) {
           setTimeout(() => addToast(`✅ 已将 ${toMigrate.length} 条本地任务迁移到云端`, 'success'), 500);
         }
       } else {
-        setRecords(cloudData);
+        const migrated = cloudData.map(migrateStepKeys);
+        const changed = migrated.filter((r, i) => r !== cloudData[i]);
+        setRecords(migrated);
+        if (changed.length) {
+          await Promise.all(changed.map(r => syncRecord(r)));
+          setTimeout(() => addToast(`✅ 已把 ${changed.length} 条记录的勾选升级为稳定编号`, 'success'), 500);
+        }
       }
       setLoading(false);
     });
@@ -5751,6 +6676,8 @@ function App() {
             />
           ) : sidebarPage==='usdgo_budget' ? (
             <UsdgoBudgetView addToast={addToast}/>
+          ) : sidebarPage==='ann_templates' ? (
+            <AnnTemplateView addToast={addToast}/>
           ) : sidebarPage==='task_board' ? (
             <TaskBoardView addToast={addToast}/>
           ) : (
@@ -5768,7 +6695,7 @@ function App() {
           )
         )}
         {view==='new' && <NewListingWizard onSave={handleSave} onCancel={()=>setView('dashboard')} existingRecords={records} onOpenExisting={id=>{ setActiveId(id); setView('checklist'); }}/>}
-        {view==='checklist' && activeRecord && <ChecklistView record={activeRecord} onBack={handleBack} onUpdate={handleUpdate} addToast={addToast}/>}
+        {view==='checklist' && activeRecord && <ChecklistView record={activeRecord} onBack={handleBack} onUpdate={handleUpdate} addToast={addToast} allRecords={records}/>}
         {view==='completed' && <CompletedTable records={records} onBack={()=>setView('dashboard')}/>}
       </div>
     </div>
