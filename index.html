@@ -943,19 +943,31 @@ function migrateStepKeys(r) {
   } catch (e) { console.error('迁移失败', r && r.id, e); return r; }
 }
 
-function countDone(checked, naSteps) {
+// ⚠ 只能数"当前清单里真实存在的步骤"。
+// 老记录的 checked 里会留着已经删掉 / 改过的步骤 id（流程改过很多版），
+// 直接 Object.values(checked) 一数就会比 total 多，done===total 永远不成立，
+// 于是全部勾完了状态还卡在"进行中"。
+function countDone(checked, naSteps, checklist) {
+  if (Array.isArray(checklist)) {
+    return checklist.filter(st => (checked || {})[st.id] || (naSteps || {})[st.id]).length;
+  }
+  // 没传清单时退回老算法（只剩少数兼容场景）
   return Object.values(checked||{}).filter(Boolean).length
        + Object.values(naSteps||{}).filter(Boolean).length;
 }
-function computeStatus(checked, total, naSteps) {
-  const done = countDone(checked, naSteps);
-  if (done===0) return 'not_started';
-  if (done===total) return 'completed';
-  return 'in_progress';
+// 清单里有多少步是"真的能勾完的"——全是现成步骤，直接就是长度
+function computeStatus(checked, totalOrList, naSteps) {
+  const list  = Array.isArray(totalOrList) ? totalOrList : null;
+  const total = list ? list.length : totalOrList;
+  const done  = countDone(checked, naSteps, list);
+  if (!total) return 'not_started';
+  if (done === 0) return 'not_started';
+  return done >= total ? 'completed' : 'in_progress';
 }
-function getRecordStatus(r, total) {
+// 第二个参数传清单数组（推荐）或步骤总数（老用法）
+function getRecordStatus(r, totalOrList) {
   if (r.cancelled) return 'cancelled';
-  return computeStatus(r.checked||{}, total, r.naSteps||{});
+  return computeStatus(r.checked||{}, totalOrList, r.naSteps||{});
 }
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -1112,7 +1124,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
     if (siteFilter && r.site !== siteFilter) return false;
     if (filter==='all') return true;
     const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
-    const status = getRecordStatus(r, checklist.length);
+    const status = getRecordStatus(r, checklist);
     return status === filter;
   });
 
@@ -1120,8 +1132,8 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
   const sorted = [...filtered].sort((a,b) => {
     const clA = buildChecklist(a.site,a.product,a.tokenType,{stableHub:a.stableHub});
     const clB = buildChecklist(b.site,b.product,b.tokenType,{stableHub:b.stableHub});
-    const sA = STATUS_ORDER[getRecordStatus(a, clA.length)] ?? 99;
-    const sB = STATUS_ORDER[getRecordStatus(b, clB.length)] ?? 99;
+    const sA = STATUS_ORDER[getRecordStatus(a, clA)] ?? 99;
+    const sB = STATUS_ORDER[getRecordStatus(b, clB)] ?? 99;
     if (sA !== sB) return sA - sB;
     // 进行中：有预期上线时间的排前面，按时间升序（最近截止的优先）
     if (sA === 0) {
@@ -1229,7 +1241,7 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
               { key:'completed',    label:'已完成', color:'#2D2D2D' },
               { key:'cancelled',    label:'已取消', color:'#6B6B6B' },
             ].map(({key,label,color}) => {
-              const cnt = records.filter(r => getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}).length) === key).length;
+              const cnt = records.filter(r => getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool})) === key).length;
               return (
                 <div key={key} onClick={()=>setFilter(filter===key?'all':key)} style={{
                   background: filter===key ? '#A8D8F0' : 'white',
@@ -1274,9 +1286,9 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                       <div style={{textAlign:'center', padding:'20px 0', color:'#6B6B6B', fontSize:13}}>暂无任务</div>
                     ) : siteRecords.map(r => {
               const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
-              const done = Object.values(r.checked||{}).filter(Boolean).length;
+              const done = countDone(r.checked, r.naSteps, checklist);
               const pct = checklist.length ? Math.round(done/checklist.length*100) : 0;
-              const status = getRecordStatus(r, checklist.length);
+              const status = getRecordStatus(r, checklist);
               const sm = STATUS_META[status];
               const isGrid = true;
               const isCancelled = status === 'cancelled';
@@ -1422,10 +1434,10 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
                 <tbody>
                   {sorted.map((r,i)=>{
                     const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
-                    const done = Object.values(r.checked||{}).filter(Boolean).length;
+                    const done = countDone(r.checked, r.naSteps, checklist);
                     const total = checklist.length;
                     const pct = total ? Math.round(done/total*100) : 0;
-                    const status = getRecordStatus(r, total);
+                    const status = getRecordStatus(r, checklist);
                     const sm = STATUS_META[status];
                     const isCancelled = status === 'cancelled';
                     const siteInfo = SITES.find(s=>s.id===r.site);
@@ -1480,9 +1492,9 @@ function Dashboard({ records, onOpen, onNew, onDelete, onRestore, onUpdate, onVi
           <div style={{display:'flex', flexDirection:'column', gap:7}}>
             {sorted.map(r => {
               const checklist = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
-              const done = Object.values(r.checked||{}).filter(Boolean).length;
+              const done = countDone(r.checked, r.naSteps, checklist);
               const pct = checklist.length ? Math.round(done/checklist.length*100) : 0;
-              const status = getRecordStatus(r, checklist.length);
+              const status = getRecordStatus(r, checklist);
               const sm = STATUS_META[status];
               const isGrid = false;
               const isCancelled = status === 'cancelled';
@@ -1770,9 +1782,9 @@ function NewListingWizard({ onSave, onCancel, existingRecords, onOpenExisting })
             <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:20}}>
               {dupWarning.matches.map(r => {
                 const cl = buildChecklist(r.site, r.product, r.tokenType, {stableHub: r.stableHub, launchpool: r.launchpool});
-                const st = getRecordStatus(r, cl.length);
+                const st = getRecordStatus(r, cl);
                 const sm = STATUS_META[st];
-                const done = Object.values(r.checked||{}).filter(Boolean).length;
+                const done = countDone(r.checked, r.naSteps, cl);
                 return (
                   <div key={r.id} style={{background:'#FDE68A', border:'2px solid #2D2D2D', borderRadius:20, padding:'8px 12px', display:'flex', alignItems:'center', gap:12}}>
                     <div style={{flex:1}}>
@@ -3832,7 +3844,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast, allRecords }) {
   const total = checklist.length;
   const isCancelled = !!record.cancelled;
   // done = checked + NA (both count toward progress)
-  const done = countDone(checked, record.naSteps||{});
+  const done = countDone(checked, record.naSteps||{}, checklist);
   const pct = total ? Math.round(done/total*100) : 0;
   const isComplete = !isCancelled && done===total && total>0;
 
@@ -3855,8 +3867,8 @@ function ChecklistView({ record, onBack, onUpdate, addToast, allRecords }) {
     const nowDone = !checked[idx];
     const newChecked = {...checked, [idx]: nowDone};
     const newNA = nowDone ? {...naSteps, [idx]:false} : naSteps;
-    const step = checklist[idx];
-    const newTotal = countDone(newChecked, newNA);
+    const step = checklist.find(st => st.id === idx);
+    const newTotal = countDone(newChecked, newNA, checklist);
     let msg = nowDone ? ('✅ ' + step.task.slice(0,28)) : ('↩ 撤销：' + step.task.slice(0,24));
     if (nowDone && newTotal===checklist.length) msg = '🎉 ' + record.tokenName + ' 全部完成！';
     onUpdate({...record, checked:newChecked, naSteps:newNA, updatedAt:new Date().toISOString()}, msg);
@@ -3867,7 +3879,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast, allRecords }) {
     const newNA = {...naSteps, [idx]: nowNA};
     const newChecked = nowNA ? {...checked, [idx]:false} : checked;
     onUpdate({...record, naSteps:newNA, checked:newChecked, updatedAt:new Date().toISOString()},
-      nowNA ? ('— N/A：' + (checklist[idx]?.task||'').slice(0,20)) : '');
+      nowNA ? ('— N/A：' + (checklist.find(st => st.id === idx)?.task||'').slice(0,20)) : '');
   };
 
   const saveStepNote = (idx) => {
@@ -4223,7 +4235,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast, allRecords }) {
                             {(step.inputOptions||[]).map(opt=>{
                               const sel = stepFields[step.inputKey]===opt;
                               return (
-                                <button key={opt} onClick={e=>{e.stopPropagation();setStepField(step.inputKey,sel?'':opt,step.idx);}}
+                                <button key={opt} onClick={e=>{e.stopPropagation();setStepField(step.inputKey,sel?'':opt,step.id);}}
                                   style={{fontSize:12,padding:'4px 12px',borderRadius:14,cursor:'pointer',
                                     background:sel?'#FDE68A':'white',color:'#2D2D2D',
                                     border:`${(sel) ? '3px' : '2px'} solid #2D2D2D`,fontWeight:sel?700:400}}>
@@ -4337,7 +4349,7 @@ function ChecklistView({ record, onBack, onUpdate, addToast, allRecords }) {
 function CompletedTable({ records, onBack }) {
   const [copied, setCopied] = useState(false);
 
-  const completed = records.filter(r => getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}).length) === 'completed');
+  const completed = records.filter(r => getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool})) === 'completed');
 
   const COLS = ['Token','区块链','交易对','站点','交易类型','用户类型','上线时间'];
   const toRow = r => [
@@ -4491,7 +4503,7 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
   const naSteps   = record.naSteps   || {};
   const stepNotes = record.stepNotes || {};
   const total = checklist.length;
-  const done  = countDone(checked, naSteps);
+  const done  = countDone(checked, naSteps, checklist);
   const pct   = total ? Math.round(done/total*100) : 0;
   const isCancelled = !!record.cancelled;
 
@@ -4696,7 +4708,7 @@ function DetailPanel({ record, onClose, onUpdate, onOpenFull, onCopy, scrollToPh
                         {step.inputType==='select' && !isNA && (
                           <div style={{display:'flex',gap:3,flexWrap:'wrap',marginTop:2}}>
                             {(step.inputOptions||[]).map(opt=>(
-                              <button key={opt} onClick={e=>{e.stopPropagation();!isCancelled&&setStepField(step.inputKey,fieldVal===opt?'':opt,step.idx);}}
+                              <button key={opt} onClick={e=>{e.stopPropagation();!isCancelled&&setStepField(step.inputKey,fieldVal===opt?'':opt,step.id);}}
                                 style={{fontSize:10,padding:'2px 8px',borderRadius:12,cursor:isCancelled?'default':'pointer',
                                   background:fieldVal===opt?'#FDE68A':step.inputType?'#F5F0E6':'#F5F0E6',
                                   color:'#2D2D2D',
@@ -4831,13 +4843,13 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
     .filter(r => {
       if (statusFilt==='all') return true;
       const cl = buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool});
-      return getRecordStatus(r,cl.length)===statusFilt;
+      return getRecordStatus(r,cl)===statusFilt;
     })
     .sort((a,b) => {
       const clA = buildChecklist(a.site,a.product,a.tokenType,{stableHub:a.stableHub,launchpool:a.launchpool});
       const clB = buildChecklist(b.site,b.product,b.tokenType,{stableHub:b.stableHub,launchpool:b.launchpool});
-      const rA = STATUS_RANK[getRecordStatus(a,clA.length)]??99;
-      const rB = STATUS_RANK[getRecordStatus(b,clB.length)]??99;
+      const rA = STATUS_RANK[getRecordStatus(a,clA)]??99;
+      const rB = STATUS_RANK[getRecordStatus(b,clB)]??99;
       if (rA !== rB) return rA - rB;
       // Within same status: sort by expectedLaunchTime asc (nulls last)
       const ta = a.expectedLaunchTime ? new Date(a.expectedLaunchTime) : null;
@@ -4853,7 +4865,7 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
   // 掉到下面的"其他记录"里就看不见了，会忘。
   const upcoming = allRows.filter(r => {
     if (!r.expectedLaunchTime) return false;
-    const st = getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}).length);
+    const st = getRecordStatus(r, buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}));
     if (st==='completed'||st==='cancelled') return false;
     return workingDaysUntil(r.expectedLaunchTime) <= 7;   // -1 表示今天或已经过了
   }).sort((x,y) => {
@@ -4888,7 +4900,7 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
           field==='userType'?r.userType||'':
           field==='expectedLaunchTime'?toInputVal(r.expectedLaunchTime):
           field==='quoteCurrencies'?JSON.stringify(r.quoteCurrencies||[]):
-          field==='status'?getRecordStatus(r,buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool}).length):
+          field==='status'?getRecordStatus(r,buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool})):
           '');}
         }}>
         <div style={{padding:'7px 9px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
@@ -5104,9 +5116,9 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
     const odays = isUpcoming ? overdueDays(r.expectedLaunchTime) : null;
     const isOverdue = odays != null && odays > 0;   // 当天到期还不算过期，只标一下
     const cl = buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool});
-    const done = countDone(r.checked, r.naSteps);
+    const done = countDone(r.checked, r.naSteps, cl);
     const pct = cl.length?Math.round(done/cl.length*100):0;
-    const status = getRecordStatus(r, cl.length);
+    const status = getRecordStatus(r, cl);
     const ss = SS[status]||SS.not_started;
     const siteS = SITE_S[r.site]||{bg:'#F5F0E6',color:'#2D2D2D'};
     const siteInfo = SITES.find(s=>s.id===r.site);
@@ -5235,8 +5247,8 @@ function OverviewTable({ records, onOpen, onUpdate, onNew, onImport, onDelete, o
     const headers = ['#','代币名称','站点','产品类型','状态','进度%','完成/总计','预计上线时间','备注/卡点','区块链','前置','BD','合规','执行','上线'];
     const rows = records.filter(r=>!siteFilter||r.site===siteFilter).map((r,i)=>{
       const cl = buildChecklist(r.site,r.product,r.tokenType,{stableHub:r.stableHub,launchpool:r.launchpool});
-      const done = countDone(r.checked,r.naSteps);
-      const status = getRecordStatus(r,cl.length);
+      const done = countDone(r.checked,r.naSteps,cl);
+      const status = getRecordStatus(r,cl);
       const statusLabel = {not_started:'未开始',in_progress:'进行中',completed:'已完成',cancelled:'已取消'}[status]||status;
       const phases = PHASE_NAMES.map(p=>{
         const ps = cl.map((s,idx)=>({...s,idx})).filter(s=>s.phase===p.phaseName);
